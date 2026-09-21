@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+step="${VOLUME_STEP:-5}"
+
+case "${1:-}" in
+  up)
+    wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ "${step}%+"
+    ;;
+  down)
+    wpctl set-volume @DEFAULT_AUDIO_SINK@ "${step}%-"
+    ;;
+  mute)
+    wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+    ;;
+  *)
+    printf 'Usage: %s {up|down|mute}\n' "$0" >&2
+    exit 2
+    ;;
+esac
+
+read -r _ volume < <(wpctl get-volume @DEFAULT_AUDIO_SINK@)
+muted=0
+wpctl get-volume @DEFAULT_AUDIO_SINK@ | grep -q MUTED && muted=1
+percent="$(awk -v v="$volume" 'BEGIN { printf "%d", v * 100 + 0.5 }')"
+
+"$HOME/.local/bin/mango-osd" volume "$percent" "$muted" >/dev/null 2>&1 || true

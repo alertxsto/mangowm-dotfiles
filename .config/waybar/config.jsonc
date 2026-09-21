@@ -1,0 +1,200 @@
+{
+  "layer": "top",
+  "position": "top",
+  "exclusive": true,
+  "passthrough": false,
+  "gtk-layer-shell": true,
+  "reload_style_on_change": true,
+  "height": 36,
+  "spacing": 0,
+  "margin-top": 6,
+  "margin-left": 8,
+  "margin-right": 8,
+  "margin-bottom": 0,
+
+  "modules-left": ["group/left"],
+  "modules-center": ["clock"],
+  "modules-right": ["group/right"],
+
+  "group/left": {
+    "orientation": "inherit",
+    "modules": ["custom/launcher", "group/workspaces", "mpris"]
+  },
+  "group/workspaces": {
+    "orientation": "inherit",
+    "modules": [
+      "custom/workspace1", "custom/workspace2", "custom/workspace3",
+      "custom/workspace4", "custom/workspace5", "custom/workspace6",
+      "custom/workspace7", "custom/workspace8", "custom/workspace9"
+    ]
+  },
+  "group/right": {
+    "orientation": "inherit",
+    "modules": ["tray", "idle_inhibitor", "network", "pulseaudio", "backlight", "cpu", "memory", "temperature", "power-profiles-daemon", "battery", "custom/notification"]
+  },
+
+  "custom/launcher": {
+    "format": "",
+    "tooltip-format": "Applications  •  Super+D",
+    "on-click": "rofi -show drun"
+  },
+  "custom/workspace1": {
+    "exec": "$HOME/.local/bin/workspace-tag 1",
+    "return-type": "json",
+    "interval": 86400,
+    "signal": 1,
+    "on-click": "mmsg dispatch view,1"
+  },
+  "custom/workspace2": {
+    "exec": "$HOME/.local/bin/workspace-tag 2",
+    "return-type": "json",
+    "interval": 86400,
+    "signal": 2,
+    "on-click": "mmsg dispatch view,2"
+  },
+  "custom/workspace3": {
+    "exec": "$HOME/.local/bin/workspace-tag 3",
+    "return-type": "json",
+    "interval": 86400,
+    "signal": 3,
+    "on-click": "mmsg dispatch view,3"
+  },
+  "custom/workspace4": {
+    "exec": "$HOME/.local/bin/workspace-tag 4",
+    "return-type": "json",
+    "interval": 86400,
+    "signal": 4,
+    "on-click": "mmsg dispatch view,4"
+  },
+  "custom/workspace5": {
+    "exec": "$HOME/.local/bin/workspace-tag 5",
+    "return-type": "json",
+    "interval": 86400,
+    "signal": 5,
+    "on-click": "mmsg dispatch view,5"
+  },
+  "custom/workspace6": {
+    "exec": "$HOME/.local/bin/workspace-tag 6",
+    "return-type": "json",
+    "interval": 86400,
+    "signal": 6,
+    "on-click": "mmsg dispatch view,6"
+  },
+  "custom/workspace7": {
+    "exec": "$HOME/.local/bin/workspace-tag 7",
+    "return-type": "json",
+    "interval": 86400,
+    "signal": 7,
+    "on-click": "mmsg dispatch view,7"
+  },
+  "custom/workspace8": {
+    "exec": "$HOME/.local/bin/workspace-tag 8",
+    "return-type": "json",
+    "interval": 86400,
+    "signal": 8,
+    "on-click": "mmsg dispatch view,8"
+  },
+  "custom/workspace9": {
+    "exec": "$HOME/.local/bin/workspace-tag 9",
+    "return-type": "json",
+    "interval": 86400,
+    "signal": 9,
+    "on-click": "mmsg dispatch view,9"
+  },
+  "mpris": {
+    "format": "{player_icon} {title}",
+    "format-paused": "{status_icon} {title}",
+    "max-length": 28,
+    "dynamic-len": 20,
+    "player-icons": { "default": "󰎈", "spotify": "" },
+    "status-icons": { "paused": "" },
+    "ignored-players": ["firefox", "chromium", "brave"]
+  },
+  "clock": {
+    "format": "  {:%H:%M}",
+    "format-alt": "  {:%A, %d %B %Y}",
+    "tooltip-format": "<big>{:%B %Y}</big>\n<tt><small>{calendar}</small></tt>"
+  },
+  "tray": {
+    "icon-size": 17,
+    "spacing": 10
+  },
+  "idle_inhibitor": {
+    "format": "{icon}",
+    "format-icons": { "activated": "", "deactivated": "" }
+  },
+  "power-profiles-daemon": {
+    "format": "{icon}",
+    "tooltip-format": "Power profile: {profile}\nClick to switch profile",
+    "tooltip": true,
+    "format-icons": {
+      "default": "",
+      "performance": "",
+      "balanced": "",
+      "power-saver": ""
+    }
+  },
+  "network": {
+    "interface": "wlan0",
+    "format-wifi": "{icon}",
+    "format-ethernet": "󰈀",
+    "format-linked": "󰈀",
+    "format-disconnected": "󰤮",
+    "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
+    "tooltip-format-wifi": "{essid}  {signalStrength}%\n↓ {bandwidthDownBytes}  ↑ {bandwidthUpBytes}\nClick to manage networks",
+    "tooltip-format-ethernet": "{ifname}\n↓ {bandwidthDownBytes}  ↑ {bandwidthUpBytes}",
+    "tooltip-format-disconnected": "Disconnected",
+    "interval": 15,
+    "on-click": "$HOME/.local/bin/network-popup",
+    "on-click-right": "kitty --class network-config -e nmtui"
+  },
+  "pulseaudio": {
+    "format": "{icon} {volume}%",
+    "format-bluetooth": " {volume}%",
+    "format-muted": "󰖁",
+    "format-icons": { "headphone": "", "default": ["", "", ""] },
+    "scroll-step": 2,
+    "on-click": "pavucontrol",
+    "on-click-right": "pactl set-sink-mute @DEFAULT_SINK@ toggle"
+  },
+  "cpu": {
+    "interval": 2,
+    "format": " {usage}%",
+    "states": { "warning": 70, "critical": 90 },
+    "tooltip": false
+  },
+  "memory": {
+    "interval": 2,
+    "format": " {percentage}%",
+    "states": { "warning": 70, "critical": 90 }
+  },
+  "temperature": {
+    "critical-threshold": 80,
+    "format": " {temperatureC}°",
+    "format-critical": " {temperatureC}°"
+  },
+  "backlight": {
+    "format": "{icon} {percent}%",
+    "format-icons": ["󰃞", "󰃟", "󰃠"],
+    "scroll-step": 5
+  },
+  "battery": {
+    "states": { "warning": 30, "critical": 15 },
+    "format": "{icon} {capacity}%",
+    "format-charging": "󰂄 {capacity}%",
+    "format-plugged": " {capacity}%",
+    "format-full": "󰁹 {capacity}%",
+    "format-icons": ["󰁺", "󰁻", "󰁽", "󰁿", "󰂁", "󰁹"]
+  },
+  "custom/notification": {
+    "tooltip": false,
+    "format": "{icon} {text}",
+    "format-icons": { "notification": "", "none": "", "dnd-notification": "", "dnd-none": "", "inhibited-notification": "", "inhibited-none": "", "dnd-inhibited-notification": "", "dnd-inhibited-none": "" },
+    "return-type": "json",
+    "exec-if": "which swaync-client",
+    "exec": "swaync-client -swb",
+    "on-click": "swaync-client -t -sw",
+    "on-click-right": "swaync-client -d -sw",
+    "escape": true
+  }
+}

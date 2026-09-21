@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Emits one workspace state for Waybar. The watcher already keeps a current
+# Mango JSON snapshot in tmpfs, so this deliberately avoids Python/jq startup on
+# every signal.
+set -uo pipefail
+
+index="${1:-}"
+[[ "$index" =~ ^[1-9]$ ]] || exit 2
+cache="${XDG_RUNTIME_DIR:-/tmp}/mango-workspaces.json"
+
+if [[ -r "$cache" ]]; then
+  data="$(<"$cache")"
+else
+  data="$(mmsg get all-tags 2>/dev/null)" || exit 1
+fi
+
+needle="\"index\":$index,"
+[[ "$data" == *"$needle"* ]] || exit 1
+chunk="${data#*"$needle"}"
+chunk="${chunk%%\}*}"
+
+if [[ "$chunk" == *'"is_urgent":true'* ]]; then
+  state="urgent"
+elif [[ "$chunk" == *'"is_active":true'* ]]; then
+  state="active"
+else
+  count="${chunk##*\"client_count\":}"
+  count="${count%%[!0-9]*}"
+  if (( ${count:-0} > 0 )); then
+    state="occupied"
+  else
+    state="empty"
+  fi
+fi
+
+count="${chunk##*\"client_count\":}"
+count="${count%%[!0-9]*}"
+if (( ${count:-0} == 0 )); then
+  detail="empty"
+elif (( count == 1 )); then
+  detail="1 window"
+else
+  detail="$count windows"
+fi
+
+printf '{"text":"%s","class":"%s","tooltip":"Workspace %s - %s"}\n' \
+  "$index" "$state" "$index" "$detail"

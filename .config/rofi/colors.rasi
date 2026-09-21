@@ -1,0 +1,18 @@
+/* Generated from the active wallpaper by Matugen. */
+* {
+    primary: #ffb0d0;
+    on-primary: #4c1833;
+    primary-container: #864764;
+    on-primary-container: #ffffff;
+    secondary: #e1bdca;
+    on-secondary: #3b252e;
+    tertiary: #f1bb98;
+    error: #ffb4ab;
+    surface: #191114;
+    surface-container: #282023;
+    surface-container-high: #332a2d;
+    on-surface: #eedfe2;
+    on-surface-variant: #d4c2c7;
+    outline: #9d8c92;
+    outline-variant: #66585d;
+}

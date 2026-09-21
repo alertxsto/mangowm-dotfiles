@@ -1,0 +1,327 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+palette="$HOME/.config/rofi/colors.rasi"
+[[ -r "$palette" ]] || exit 0
+
+declare -A color
+while IFS=: read -r raw_key raw_value; do
+  key="${raw_key//[[:space:]]/}"
+  value="${raw_value%%;*}"
+  value="${value//[[:space:]]/}"
+  if [[ "$key" =~ ^[a-z-]+$ && "$value" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+    color["$key"]="$value"
+  fi
+done < "$palette"
+
+required=(primary on-primary primary-container on-primary-container secondary on-secondary tertiary error surface surface-container surface-container-high on-surface on-surface-variant outline outline-variant)
+for key in "${required[@]}"; do
+  [[ -n "${color[$key]:-}" ]] || exit 1
+done
+
+rgb() {
+  local hex="${color[$1]#\#}"
+  printf '%d,%d,%d' "0x${hex:0:2}" "0x${hex:2:2}" "0x${hex:4:2}"
+}
+
+scheme_dir="$HOME/.local/share/color-schemes"
+gtk3_dir="$HOME/.config/gtk-3.0"
+gtk4_dir="$HOME/.config/gtk-4.0"
+mkdir -p "$scheme_dir" "$gtk3_dir" "$gtk4_dir"
+
+cat > "$scheme_dir/MangoDynamic.colors" <<EOF
+[ColorEffects:Disabled]
+Color=$(rgb on-surface-variant)
+ColorAmount=0
+ColorEffect=0
+ContrastAmount=0.65
+ContrastEffect=1
+IntensityAmount=0.1
+IntensityEffect=2
+
+[ColorEffects:Inactive]
+ChangeSelectionColor=true
+Color=$(rgb on-surface-variant)
+ColorAmount=0.025
+ColorEffect=2
+ContrastAmount=0.1
+ContrastEffect=2
+Enable=false
+IntensityAmount=0
+IntensityEffect=0
+
+[Colors:Button]
+BackgroundAlternate=$(rgb primary-container)
+BackgroundNormal=$(rgb surface-container-high)
+DecorationFocus=$(rgb primary)
+DecorationHover=$(rgb primary)
+ForegroundActive=$(rgb primary)
+ForegroundInactive=$(rgb on-surface-variant)
+ForegroundLink=$(rgb tertiary)
+ForegroundNegative=$(rgb error)
+ForegroundNeutral=$(rgb secondary)
+ForegroundNormal=$(rgb on-surface)
+ForegroundPositive=$(rgb tertiary)
+ForegroundVisited=$(rgb secondary)
+
+[Colors:Complementary]
+BackgroundAlternate=$(rgb surface-container-high)
+BackgroundNormal=$(rgb surface)
+DecorationFocus=$(rgb primary)
+DecorationHover=$(rgb primary)
+ForegroundActive=$(rgb primary)
+ForegroundInactive=$(rgb on-surface-variant)
+ForegroundLink=$(rgb tertiary)
+ForegroundNegative=$(rgb error)
+ForegroundNeutral=$(rgb secondary)
+ForegroundNormal=$(rgb on-surface)
+ForegroundPositive=$(rgb tertiary)
+ForegroundVisited=$(rgb secondary)
+
+[Colors:Header]
+BackgroundAlternate=$(rgb surface-container)
+BackgroundNormal=$(rgb surface-container-high)
+DecorationFocus=$(rgb primary)
+DecorationHover=$(rgb primary)
+ForegroundActive=$(rgb primary)
+ForegroundInactive=$(rgb on-surface-variant)
+ForegroundLink=$(rgb tertiary)
+ForegroundNegative=$(rgb error)
+ForegroundNeutral=$(rgb secondary)
+ForegroundNormal=$(rgb on-surface)
+ForegroundPositive=$(rgb tertiary)
+ForegroundVisited=$(rgb secondary)
+
+# KDE derives the inactive header from the window frame colours and ignores
+# this group's own values, so it mirrors [Colors:Window] to stay honest.
+[Colors:Header][Inactive]
+BackgroundAlternate=$(rgb surface-container-high)
+BackgroundNormal=$(rgb surface-container)
+DecorationFocus=$(rgb primary)
+DecorationHover=$(rgb primary)
+ForegroundActive=$(rgb primary)
+ForegroundInactive=$(rgb on-surface-variant)
+ForegroundLink=$(rgb tertiary)
+ForegroundNegative=$(rgb error)
+ForegroundNeutral=$(rgb secondary)
+ForegroundNormal=$(rgb on-surface)
+ForegroundPositive=$(rgb tertiary)
+ForegroundVisited=$(rgb secondary)
+
+[Colors:Selection]
+BackgroundAlternate=$(rgb primary-container)
+BackgroundNormal=$(rgb primary-container)
+DecorationFocus=$(rgb primary)
+DecorationHover=$(rgb primary)
+ForegroundActive=$(rgb on-primary-container)
+ForegroundInactive=$(rgb on-primary-container)
+ForegroundLink=$(rgb on-primary-container)
+ForegroundNegative=$(rgb error)
+ForegroundNeutral=$(rgb secondary)
+ForegroundNormal=$(rgb on-primary-container)
+ForegroundPositive=$(rgb tertiary)
+ForegroundVisited=$(rgb on-primary-container)
+
+[Colors:Tooltip]
+BackgroundAlternate=$(rgb surface-container)
+BackgroundNormal=$(rgb surface-container-high)
+DecorationFocus=$(rgb primary)
+DecorationHover=$(rgb primary)
+ForegroundActive=$(rgb primary)
+ForegroundInactive=$(rgb on-surface-variant)
+ForegroundLink=$(rgb tertiary)
+ForegroundNegative=$(rgb error)
+ForegroundNeutral=$(rgb secondary)
+ForegroundNormal=$(rgb on-surface)
+ForegroundPositive=$(rgb tertiary)
+ForegroundVisited=$(rgb secondary)
+
+[Colors:View]
+BackgroundAlternate=$(rgb surface-container)
+BackgroundNormal=$(rgb surface)
+DecorationFocus=$(rgb primary)
+DecorationHover=$(rgb primary)
+ForegroundActive=$(rgb primary)
+ForegroundInactive=$(rgb on-surface-variant)
+ForegroundLink=$(rgb tertiary)
+ForegroundNegative=$(rgb error)
+ForegroundNeutral=$(rgb secondary)
+ForegroundNormal=$(rgb on-surface)
+ForegroundPositive=$(rgb tertiary)
+ForegroundVisited=$(rgb secondary)
+
+[Colors:Window]
+BackgroundAlternate=$(rgb surface-container-high)
+BackgroundNormal=$(rgb surface-container)
+DecorationFocus=$(rgb primary)
+DecorationHover=$(rgb primary)
+ForegroundActive=$(rgb primary)
+ForegroundInactive=$(rgb on-surface-variant)
+ForegroundLink=$(rgb tertiary)
+ForegroundNegative=$(rgb error)
+ForegroundNeutral=$(rgb secondary)
+ForegroundNormal=$(rgb on-surface)
+ForegroundPositive=$(rgb tertiary)
+ForegroundVisited=$(rgb secondary)
+
+[General]
+ColorScheme=MangoDynamic
+Name=Mango Dynamic
+shadeSortColumn=true
+
+[KDE]
+ColorScheme=MangoDynamic
+contrast=4
+
+[WM]
+activeBackground=$(rgb surface-container-high)
+activeBlend=$(rgb surface-container-high)
+activeForeground=$(rgb on-surface)
+inactiveBackground=$(rgb surface-container)
+inactiveBlend=$(rgb surface-container)
+inactiveForeground=$(rgb on-surface-variant)
+EOF
+
+cat > "$gtk3_dir/colors.css" <<EOF
+@define-color borders_breeze ${color[outline-variant]};
+@define-color content_view_bg_breeze ${color[surface]};
+@define-color error_color_backdrop_breeze ${color[error]};
+@define-color error_color_breeze ${color[error]};
+@define-color error_color_insensitive_backdrop_breeze ${color[outline-variant]};
+@define-color error_color_insensitive_breeze ${color[outline-variant]};
+@define-color insensitive_base_color_breeze ${color[surface]};
+@define-color insensitive_base_fg_color_breeze ${color[outline]};
+@define-color insensitive_bg_color_breeze ${color[surface-container]};
+@define-color insensitive_borders_breeze ${color[outline-variant]};
+@define-color insensitive_fg_color_breeze ${color[outline]};
+@define-color insensitive_selected_bg_color_breeze ${color[surface-container-high]};
+@define-color insensitive_selected_fg_color_breeze ${color[outline]};
+@define-color insensitive_unfocused_bg_color_breeze ${color[surface-container]};
+@define-color insensitive_unfocused_fg_color_breeze ${color[outline]};
+@define-color insensitive_unfocused_selected_bg_color_breeze ${color[surface-container-high]};
+@define-color insensitive_unfocused_selected_fg_color_breeze ${color[outline]};
+@define-color link_color_breeze ${color[tertiary]};
+@define-color link_visited_color_breeze ${color[secondary]};
+@define-color success_color_backdrop_breeze ${color[tertiary]};
+@define-color success_color_breeze ${color[tertiary]};
+@define-color success_color_insensitive_backdrop_breeze ${color[outline-variant]};
+@define-color success_color_insensitive_breeze ${color[outline-variant]};
+@define-color theme_base_color_breeze ${color[surface]};
+@define-color theme_bg_color_breeze ${color[surface-container]};
+@define-color theme_button_background_backdrop_breeze ${color[surface-container]};
+@define-color theme_button_background_backdrop_insensitive_breeze ${color[surface-container]};
+@define-color theme_button_background_insensitive_breeze ${color[surface-container]};
+@define-color theme_button_background_normal_breeze ${color[surface-container-high]};
+@define-color theme_button_decoration_focus_backdrop_breeze ${color[primary]};
+@define-color theme_button_decoration_focus_backdrop_insensitive_breeze ${color[outline]};
+@define-color theme_button_decoration_focus_breeze ${color[primary]};
+@define-color theme_button_decoration_focus_insensitive_breeze ${color[outline]};
+@define-color theme_button_decoration_hover_backdrop_breeze ${color[primary]};
+@define-color theme_button_decoration_hover_backdrop_insensitive_breeze ${color[outline]};
+@define-color theme_button_decoration_hover_breeze ${color[primary]};
+@define-color theme_button_decoration_hover_insensitive_breeze ${color[outline]};
+@define-color theme_button_foreground_active_backdrop_breeze ${color[on-surface]};
+@define-color theme_button_foreground_active_backdrop_insensitive_breeze ${color[outline]};
+@define-color theme_button_foreground_active_breeze ${color[on-surface]};
+@define-color theme_button_foreground_active_insensitive_breeze ${color[outline]};
+@define-color theme_button_foreground_backdrop_breeze ${color[on-surface]};
+@define-color theme_button_foreground_backdrop_insensitive_breeze ${color[outline]};
+@define-color theme_button_foreground_insensitive_breeze ${color[outline]};
+@define-color theme_button_foreground_normal_breeze ${color[on-surface]};
+@define-color theme_fg_color_breeze ${color[on-surface]};
+@define-color theme_header_background_backdrop_breeze ${color[surface-container]};
+@define-color theme_header_background_breeze ${color[surface-container-high]};
+@define-color theme_header_background_light_breeze ${color[surface-container]};
+@define-color theme_header_foreground_backdrop_breeze ${color[on-surface-variant]};
+@define-color theme_header_foreground_breeze ${color[on-surface]};
+@define-color theme_header_foreground_insensitive_backdrop_breeze ${color[outline]};
+@define-color theme_header_foreground_insensitive_breeze ${color[outline]};
+@define-color theme_hovering_selected_bg_color_breeze ${color[primary-container]};
+@define-color theme_selected_bg_color_breeze ${color[primary-container]};
+@define-color theme_selected_fg_color_breeze ${color[on-primary-container]};
+@define-color theme_text_color_breeze ${color[on-surface]};
+@define-color theme_titlebar_background_backdrop_breeze ${color[surface-container]};
+@define-color theme_titlebar_background_breeze ${color[surface-container-high]};
+@define-color theme_titlebar_background_light_breeze ${color[surface-container]};
+@define-color theme_titlebar_foreground_backdrop_breeze ${color[on-surface-variant]};
+@define-color theme_titlebar_foreground_breeze ${color[on-surface]};
+@define-color theme_titlebar_foreground_insensitive_backdrop_breeze ${color[outline]};
+@define-color theme_titlebar_foreground_insensitive_breeze ${color[outline]};
+@define-color theme_unfocused_base_color_breeze ${color[surface]};
+@define-color theme_unfocused_bg_color_breeze ${color[surface-container]};
+@define-color theme_unfocused_fg_color_breeze ${color[on-surface-variant]};
+@define-color theme_unfocused_selected_bg_color_alt_breeze ${color[primary-container]};
+@define-color theme_unfocused_selected_bg_color_breeze ${color[primary-container]};
+@define-color theme_unfocused_selected_fg_color_breeze ${color[on-primary-container]};
+@define-color theme_unfocused_text_color_breeze ${color[on-surface-variant]};
+@define-color theme_unfocused_view_bg_color_breeze ${color[surface]};
+@define-color theme_unfocused_view_text_color_breeze ${color[on-surface-variant]};
+@define-color theme_view_active_decoration_color_breeze ${color[primary]};
+@define-color theme_view_hover_decoration_color_breeze ${color[primary]};
+@define-color tooltip_background_breeze ${color[surface-container-high]};
+@define-color tooltip_border_breeze ${color[outline-variant]};
+@define-color tooltip_text_breeze ${color[on-surface]};
+@define-color unfocused_borders_breeze ${color[outline-variant]};
+@define-color unfocused_insensitive_borders_breeze ${color[outline-variant]};
+@define-color warning_color_backdrop_breeze ${color[secondary]};
+@define-color warning_color_breeze ${color[secondary]};
+@define-color warning_color_insensitive_backdrop_breeze ${color[outline-variant]};
+@define-color warning_color_insensitive_breeze ${color[outline-variant]};
+
+@define-color accent_bg_color ${color[primary-container]};
+@define-color accent_fg_color ${color[on-primary-container]};
+@define-color accent_color ${color[primary]};
+@define-color destructive_bg_color ${color[error]};
+@define-color destructive_fg_color ${color[on-primary]};
+@define-color destructive_color ${color[error]};
+@define-color success_bg_color ${color[tertiary]};
+@define-color success_fg_color ${color[on-primary]};
+@define-color success_color ${color[tertiary]};
+@define-color warning_bg_color ${color[secondary]};
+@define-color warning_fg_color ${color[on-secondary]:-${color[on-primary]}};
+@define-color warning_color ${color[secondary]};
+@define-color error_bg_color ${color[error]};
+@define-color error_fg_color ${color[on-primary]};
+@define-color error_color ${color[error]};
+@define-color window_bg_color ${color[surface-container]};
+@define-color window_fg_color ${color[on-surface]};
+@define-color view_bg_color ${color[surface]};
+@define-color view_fg_color ${color[on-surface]};
+@define-color headerbar_bg_color ${color[surface-container-high]};
+@define-color headerbar_fg_color ${color[on-surface]};
+@define-color headerbar_border_color ${color[outline-variant]};
+@define-color headerbar_backdrop_color ${color[surface-container]};
+@define-color sidebar_bg_color ${color[surface-container]};
+@define-color sidebar_fg_color ${color[on-surface]};
+@define-color sidebar_backdrop_color ${color[surface]};
+@define-color secondary_sidebar_bg_color ${color[surface]};
+@define-color secondary_sidebar_fg_color ${color[on-surface]};
+@define-color secondary_sidebar_backdrop_color ${color[surface]};
+@define-color card_bg_color ${color[surface-container-high]};
+@define-color card_fg_color ${color[on-surface]};
+@define-color dialog_bg_color ${color[surface-container-high]};
+@define-color dialog_fg_color ${color[on-surface]};
+@define-color popover_bg_color ${color[surface-container-high]};
+@define-color popover_fg_color ${color[on-surface]};
+@define-color thumbnail_bg_color ${color[surface-container-high]};
+@define-color thumbnail_fg_color ${color[on-surface]};
+EOF
+
+cp "$gtk3_dir/colors.css" "$gtk4_dir/colors.css"
+
+# Dolphin uses a per-accent Breeze overlay. The helper is synchronous but
+# focused (~2k folder aliases), so KDE never observes a new palette with stale
+# blue folders.
+
+# General/AccentColor makes plasma-apply-colorscheme re-tint every role from that
+# single colour, so an accent left over from an earlier palette silently
+# overrides this scheme's own primary/secondary/error roles. The scheme carries
+# explicit per-role colours, so the accent key has to stay unset.
+kwriteconfig6 --file kdeglobals --group General --key AccentColor --delete
+
+kwriteconfig6 --file kdeglobals --group General --key ColorScheme __MangoRefresh
+plasma-apply-colorscheme MangoDynamic >/dev/null
+kwriteconfig6 --file kdeglobals --group General --key Name "Mango Dynamic"
+kwriteconfig6 --file kdeglobals --group KDE --key ColorScheme MangoDynamic
+"$HOME/.local/bin/sync-desktop-icons" >/dev/null
+"$HOME/.local/bin/sync-shell-theme"

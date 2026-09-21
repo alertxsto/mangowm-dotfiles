@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+"""Generates a small Breeze overlay whose folder colour follows Matugen.
+
+The theme name includes the accent hex. Changing wallpapers therefore changes
+QIcon's theme identity instead of relying on stale per-process pixmap caches.
+Only folder icons and their inode-directory aliases are copied; everything else
+inherits from breeze-dark.
+"""
+
+from __future__ import annotations
+
+import fcntl
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+HOME = Path.home()
+SOURCE = Path("/usr/share/icons/breeze-dark")
+ICONS = HOME / ".local/share/icons"
+PALETTE = HOME / ".config/rofi/colors.rasi"
+TOKEN = re.compile(r"^\s*([a-z-]+):\s*(#[0-9a-fA-F]{6});")
+
+
+def palette() -> tuple[str, str]:
+    values: dict[str, str] = {}
+    for line in PALETTE.read_text().splitlines():
+        match = TOKEN.match(line)
+        if match:
+            values[match.group(1)] = match.group(2).lower()
+    return values["primary"], values["on-surface"]
+
+
+def set_setting(path: Path, key: str, value: str) -> None:
+    text = path.read_text() if path.exists() else "[Settings]\n"
+    pattern = re.compile(rf"^{re.escape(key)}=.*$", re.MULTILINE)
+    line = f"{key}={value}"
+    text = pattern.sub(line, text) if pattern.search(text) else text.rstrip() + f"\n{line}\n"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+
+
+def apply_theme(name: str) -> None:
+    subprocess.run(
+        ["kwriteconfig6", "--file", "kdeglobals", "--group", "Icons", "--key", "Theme", name],
+        check=True,
+    )
+    set_setting(HOME / ".config/gtk-3.0/settings.ini", "gtk-icon-theme-name", name)
+    set_setting(HOME / ".config/gtk-4.0/settings.ini", "gtk-icon-theme-name", name)
+
+    xsettings = HOME / ".config/xsettingsd/xsettingsd.conf"
+    if xsettings.exists():
+        text = xsettings.read_text()
+        text = re.sub(r'^Net/IconThemeName .*$', f'Net/IconThemeName "{name}"', text, flags=re.MULTILINE)
+        xsettings.write_text(text)
+
+    (HOME / ".cache/icon-cache.kcache").unlink(missing_ok=True)
+    subprocess.run(
+        ["qdbus6", "org.kde.KGlobalSettings", "/KGlobalSettings", "notifyChange", "4", "0"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+
+
+def candidates() -> list[Path]:
+    paths: set[Path] = set()
+    for directory in (SOURCE / "places").iterdir():
+        if directory.is_dir():
+            paths.update(directory.glob("folder*.svg"))
+            stock = directory / "stock_folder.svg"
+            if stock.exists():
+                paths.add(stock)
+    for directory in (SOURCE / "mimetypes").iterdir():
+        if directory.is_dir():
+            paths.update(directory.glob("inode-directory*.svg"))
+    return sorted(paths, key=str)
+
+
+def size_for(directory: str) -> int:
+    match = re.match(r"(\d+)(?:@(\d)x)?$", directory)
+    if not match:
+        return 64
+    return int(match.group(1)) * int(match.group(2) or 1)
+
+
+def build(name: str, primary: str, on_surface: str) -> None:
+    destination = ICONS / name
+    stamp = destination / ".stamp"
+    if stamp.exists() and stamp.read_text().strip() == f"{primary}:{on_surface}":
+        return
+
+    temporary = ICONS / f".{name}.tmp"
+    shutil.rmtree(temporary, ignore_errors=True)
+    temporary.mkdir(parents=True)
+    directories: set[str] = set()
+
+    for source in candidates():
+        relative = source.relative_to(SOURCE)
+        target = temporary / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        # read_text follows Breeze's aliases (inode-directory -> folder.svg),
+        # producing real files in the overlay and avoiding dangling links.
+        content = source.read_text().replace("#3daee9", primary).replace("#fcfcfc", on_surface)
+        target.write_text(content)
+        directories.add(str(relative.parent))
+
+    lines = [
+        "[Icon Theme]",
+        f"Name={name}",
+        "Comment=Matugen-coloured Breeze folders",
+        "Inherits=breeze-dark,hicolor",
+        "Directories=" + ",".join(sorted(directories)),
+    ]
+    for directory in sorted(directories):
+        context = "Places" if directory.startswith("places/") else "MimeTypes"
+        lines.extend(
+            ["", f"[{directory}]", f"Size={size_for(Path(directory).name)}", f"Context={context}", "Type=Fixed"]
+        )
+    (temporary / "index.theme").write_text("\n".join(lines) + "\n")
+    (temporary / ".stamp").write_text(f"{primary}:{on_surface}\n")
+
+    backup = ICONS / f".{name}.old"
+    shutil.rmtree(backup, ignore_errors=True)
+    if destination.exists():
+        destination.rename(backup)
+    temporary.rename(destination)
+    shutil.rmtree(backup, ignore_errors=True)
+
+
+def main() -> int:
+    primary, on_surface = palette()
+    name = "MangoDynamic-" + primary.removeprefix("#").upper()
+    ICONS.mkdir(parents=True, exist_ok=True)
+
+    lock_path = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "mango-icon-theme.lock"
+    with lock_path.open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        build(name, primary, on_surface)
+        apply_theme(name)
+
+        for old in ICONS.glob("MangoDynamic-*"):
+            if old.name != name and old.is_dir():
+                shutil.rmtree(old, ignore_errors=True)
+
+    print(name)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (OSError, KeyError, subprocess.SubprocessError) as error:
+        print(f"sync-desktop-icons: {error}", file=sys.stderr)
+        raise SystemExit(1)

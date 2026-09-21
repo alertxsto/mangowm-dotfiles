@@ -1,0 +1,31 @@
+[config]
+version_check = false
+fallback_color = "#89b4fa"
+prefer = "saturation"
+contrast = 0.15
+caching = true
+
+[templates.waybar]
+input_path = "__HOME__/.config/matugen/templates/colors.css"
+output_path = "__HOME__/.config/waybar/colors.css"
+type = "SchemeSmart"
+
+[templates.swaync]
+input_path = "__HOME__/.config/matugen/templates/colors.css"
+output_path = "__HOME__/.config/swaync/colors.css"
+type = "SchemeSmart"
+
+[templates.mango]
+input_path = "__HOME__/.config/matugen/templates/mango.conf"
+output_path = "__HOME__/.config/mango/colors.conf"
+type = "SchemeSmart"
+
+[templates.kitty]
+input_path = "__HOME__/.config/matugen/templates/kitty.conf"
+output_path = "__HOME__/.config/kitty/colors.conf"
+type = "SchemeSmart"
+
+[templates.rofi]
+input_path = "__HOME__/.config/matugen/templates/rofi.rasi"
+output_path = "__HOME__/.config/rofi/colors.rasi"
+type = "SchemeSmart"

@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+state_dir="${XDG_CACHE_HOME:-$HOME/.cache}/mango-theme"
+state_file="$state_dir/wallpaper"
+default_wallpaper="$HOME/Pictures/blinders.jpg"
+mkdir -p "$state_dir"
+
+if [[ $# -gt 0 ]]; then
+  wallpaper="$1"
+elif [[ -s "$state_file" ]] && [[ -f "$(<"$state_file")" ]]; then
+  wallpaper="$(<"$state_file")"
+elif [[ -f "$default_wallpaper" ]]; then
+  wallpaper="$default_wallpaper"
+else
+  wallpaper="$(find "$HOME/Pictures" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) -print -quit 2>/dev/null || true)"
+fi
+
+if [[ -z "${wallpaper:-}" || ! -f "$wallpaper" ]]; then
+  printf 'No wallpaper found; keeping the bundled fallback palette.\n' >&2
+  exit 0
+fi
+wallpaper="$(realpath "$wallpaper")"
+
+matugen image "$wallpaper" --mode dark --type scheme-smart --quiet
+"$HOME/.local/bin/sync-desktop-colors"
+printf '%s\n' "$wallpaper" > "$state_file"
+
+if [[ "${THEME_SKIP_WALLPAPER:-0}" != "1" ]]; then
+  pkill -x swaybg 2>/dev/null || true
+  nohup swaybg -i "$wallpaper" -m fill >/dev/null 2>&1 &
+fi
+
+mmsg dispatch reload_config >/dev/null 2>&1 || true
+pkill -USR2 waybar 2>/dev/null || true
+pkill -USR1 kitty 2>/dev/null || true
+swaync-client -R >/dev/null 2>&1 || true
+swaync-client -rs >/dev/null 2>&1 || true

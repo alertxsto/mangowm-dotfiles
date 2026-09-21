@@ -1,0 +1,281 @@
+@import "colors.rasi"
+
+* {
+    font: "JetBrainsMono Nerd Font 11";
+    background-color: transparent;
+    text-color: @on-surface;
+    border-color: @outline-variant;
+}
+
+window {
+    location: center;
+    anchor: center;
+    width: 980px;
+    padding: 0px;
+    border: 1px;
+    border-radius: 22px;
+    border-color: @outline-variant;
+    background-color: @surface;
+    children: [rail-layout];
+}
+
+rail-layout {
+    orientation: horizontal;
+    background-color: transparent;
+    children: [rail, mainbox];
+}
+
+rail {
+    orientation: vertical;
+    expand: false;
+    width: 220px;
+    padding: 18px 12px 14px;
+    spacing: 10px;
+    border: 0px 1px 0px 0px;
+    border-color: @outline-variant;
+    background-color: @surface-container;
+    children: [rail-brand, textbox-rail-label, mode-switcher, rail-spacer, textbox-rail-session, rail-progress];
+}
+
+rail-brand {
+    orientation: horizontal;
+    expand: false;
+    spacing: 10px;
+    padding: 2px 8px 15px;
+    border: 0px 0px 1px 0px;
+    border-color: @outline-variant;
+    children: [textbox-rail-mark, rail-copy];
+}
+
+textbox-rail-mark {
+    content: "R";
+    expand: false;
+    width: 32px;
+    padding: 8px 0px;
+    border-radius: 10px;
+    horizontal-align: 0.5;
+    vertical-align: 0.5;
+    background-color: @primary;
+    text-color: @on-primary;
+    font: "JetBrainsMono Nerd Font Bold 12";
+}
+
+rail-copy {
+    orientation: vertical;
+    spacing: 2px;
+    children: [textbox-rail-title, textbox-rail-online];
+}
+
+textbox-rail-title {
+    content: "COMMAND CENTER";
+    text-color: @on-surface;
+    font: "JetBrainsMono Nerd Font Bold 10";
+}
+
+textbox-rail-online {
+    content: "●  MANGO ONLINE";
+    text-color: @primary;
+    font: "JetBrainsMono Nerd Font 7";
+}
+
+textbox-rail-label {
+    content: "LAUNCHER  /  APPS";
+    padding: 5px 10px 0px;
+    text-color: @on-surface-variant;
+    font: "JetBrainsMono Nerd Font Bold 8";
+}
+
+mode-switcher {
+    orientation: vertical;
+    expand: false;
+    spacing: 4px;
+    background-color: transparent;
+}
+
+button {
+    padding: 11px 10px;
+    border: 1px;
+    border-radius: 10px;
+    border-color: transparent;
+    background-color: transparent;
+    text-color: @on-surface-variant;
+    horizontal-align: 0.0;
+}
+
+button selected {
+    border-color: @outline-variant;
+    background-color: @primary-container;
+    text-color: @on-primary-container;
+}
+
+rail-spacer {
+    expand: true;
+}
+
+textbox-rail-session {
+    content: "SESSION                 LIVE";
+    padding: 11px 8px 5px;
+    border: 1px 0px 0px 0px;
+    border-color: @outline-variant;
+    text-color: @on-surface-variant;
+    font: "JetBrainsMono Nerd Font Bold 7";
+}
+
+rail-progress {
+    content: "";
+    expand: false;
+    height: 3px;
+    margin: 0px 8px;
+    border-radius: 8px;
+    background-color: @primary;
+}
+
+mainbox {
+    expand: true;
+    spacing: 12px;
+    padding: 20px;
+    background-color: transparent;
+    children: [topline, inputbar, message, listview, footer];
+}
+
+topline {
+    orientation: horizontal;
+    expand: false;
+    children: [textbox-headline, top-spacer, textbox-index-status];
+}
+
+textbox-headline {
+    content: "Find applications";
+    text-color: @on-surface;
+    font: "JetBrainsMono Nerd Font Bold 16";
+}
+
+top-spacer {
+    expand: true;
+}
+
+textbox-index-status {
+    content: "APP INDEX  /  READY";
+    text-color: @on-surface-variant;
+    font: "JetBrainsMono Nerd Font Bold 8";
+    vertical-align: 0.5;
+}
+
+inputbar {
+    spacing: 12px;
+    padding: 14px 15px;
+    border: 1px;
+    border-radius: 13px;
+    border-color: @outline-variant;
+    background-color: @surface-container-high;
+    children: [prompt, entry, case-indicator];
+}
+
+prompt {
+    padding: 0px 12px 0px 0px;
+    border: 0px 1px 0px 0px;
+    border-color: @outline-variant;
+    text-color: @primary;
+    font: "JetBrainsMono Nerd Font Bold 10";
+}
+
+entry {
+    text-color: @on-surface;
+    placeholder: "Type to search…";
+    placeholder-color: @on-surface-variant;
+}
+
+case-indicator {
+    text-color: @on-surface-variant;
+}
+
+message {
+    padding: 0px 4px;
+    background-color: transparent;
+}
+
+textbox {
+    text-color: @on-surface-variant;
+    font: "JetBrainsMono Nerd Font 8";
+}
+
+listview {
+    lines: 6;
+    columns: 1;
+    fixed-columns: true;
+    fixed-height: true;
+    cycle: true;
+    scrollbar: false;
+    spacing: 4px;
+    background-color: transparent;
+}
+
+element {
+    orientation: horizontal;
+    children: [element-icon, element-text];
+    spacing: 12px;
+    padding: 8px 11px;
+    border: 1px;
+    border-radius: 11px;
+    border-color: transparent;
+    background-color: transparent;
+    text-color: @on-surface;
+}
+
+element normal.normal,
+element alternate.normal,
+element normal.active,
+element alternate.active {
+    background-color: transparent;
+    border-color: transparent;
+    text-color: @on-surface;
+}
+
+element selected.normal,
+element selected.active,
+element selected.urgent,
+element alternate.selected.normal,
+element alternate.selected.active,
+element alternate.selected.urgent {
+    background-color: @surface-container-high;
+    border-color: @outline;
+    text-color: @primary;
+}
+
+element-icon {
+    size: 36px;
+    vertical-align: 0.5;
+    background-color: transparent;
+}
+
+element-text {
+    vertical-align: 0.5;
+    horizontal-align: 0.0;
+    background-color: transparent;
+    text-color: inherit;
+}
+
+footer {
+    orientation: horizontal;
+    expand: false;
+    padding: 12px 4px 0px;
+    border: 1px 0px 0px 0px;
+    border-color: @outline-variant;
+    children: [textbox-footer-mode, footer-spacer, textbox-footer-keys];
+}
+
+textbox-footer-mode {
+    content: "APPLICATIONS ONLY";
+    text-color: @on-surface-variant;
+    font: "JetBrainsMono Nerd Font Bold 7";
+}
+
+footer-spacer {
+    expand: true;
+}
+
+textbox-footer-keys {
+    content: "↑↓ NAVIGATE    ↵ OPEN    ESC CLOSE";
+    text-color: @on-surface-variant;
+    font: "JetBrainsMono Nerd Font Bold 7";
+}

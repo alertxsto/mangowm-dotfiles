@@ -1,0 +1,253 @@
+@import url("/etc/xdg/swaync/style.css");
+@import "colors.css";
+
+:root {
+  --notification-icon-size: 48px;
+  --notification-app-icon-size: 20px;
+  --border-radius: 14px;
+  --font-size-body: 12px;
+  --font-size-summary: 13px;
+}
+
+* {
+  font-family: "JetBrainsMono Nerd Font", "Font Awesome 7 Free", sans-serif;
+  color: @on_surface;
+}
+
+notificationwindow,
+blankwindow {
+  background: transparent;
+}
+
+.control-center {
+  background: alpha(@surface, 0.96);
+  border: 1px solid alpha(@outline_variant, 0.8);
+  border-radius: 18px;
+  box-shadow: 0 8px 24px alpha(@shadow, 0.6);
+  padding: 12px;
+}
+
+.widget-title {
+  padding: 5px 7px 10px;
+}
+
+.widget-title > label {
+  color: @on_surface;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.widget-title > button,
+.widget-inhibitors > button {
+  background: @primary_container;
+  color: @on_primary_container;
+  border: none;
+  border-radius: 10px;
+  padding: 7px 12px;
+  box-shadow: none;
+}
+
+.widget-title > button:hover,
+.widget-inhibitors > button:hover {
+  background: @primary;
+  color: @on_primary;
+}
+
+.widget-dnd {
+  background: @surface_container;
+  border: 1px solid @outline_variant;
+  border-radius: 12px;
+  margin: 4px 5px 9px;
+  padding: 9px 11px;
+}
+
+.widget-dnd > label {
+  color: @on_surface;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.widget-dnd switch {
+  background: @surface_container_highest;
+  border-radius: 99px;
+  box-shadow: none;
+  min-width: 42px;
+}
+
+.widget-dnd switch:checked {
+  background: @primary;
+}
+
+.widget-dnd switch slider {
+  background: @on_surface;
+  border-radius: 99px;
+  box-shadow: none;
+}
+
+.widget-mpris {
+  margin: 4px 5px 9px;
+  padding: 0;
+}
+
+.widget-mpris .widget-mpris-player {
+  background: @surface_container;
+  border: 1px solid @outline_variant;
+  border-radius: 14px;
+  box-shadow: none;
+  margin: 0;
+}
+
+.widget-mpris .widget-mpris-player .mpris-overlay {
+  background: alpha(@surface_container, 0.90);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.widget-mpris-album-art {
+  -gtk-icon-size: 72px;
+  border-radius: 10px;
+  margin-right: 10px;
+}
+
+.widget-mpris-title {
+  color: @on_surface;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.widget-mpris-subtitle {
+  color: @on_surface_variant;
+  font-size: 11px;
+}
+
+.widget-mpris button {
+  color: @primary;
+  border-radius: 9px;
+  padding: 4px;
+}
+
+.widget-mpris button:hover {
+  background: @primary_container;
+  color: @on_primary_container;
+}
+
+.widget-volume,
+.widget-slider {
+  background: @surface_container;
+  border: 1px solid @outline_variant;
+  border-radius: 12px;
+  margin: 4px 5px;
+  padding: 9px 11px;
+}
+
+.widget-volume > box > label,
+.widget-slider > box > label,
+.widget-volume > label,
+.widget-slider > label {
+  color: @primary;
+  font-size: 16px;
+  min-width: 24px;
+}
+
+.widget-volume button {
+  background: transparent;
+  color: @on_surface_variant;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+scale trough {
+  background: @surface_container_highest;
+  border-radius: 99px;
+  min-height: 7px;
+}
+
+scale trough highlight {
+  background: @primary;
+  border-radius: 99px;
+}
+
+scale slider {
+  background: @on_primary;
+  border: 2px solid @primary;
+  border-radius: 99px;
+  min-width: 13px;
+  min-height: 13px;
+  margin: -5px;
+  box-shadow: none;
+}
+
+.control-center-list {
+  background: transparent;
+  margin-top: 5px;
+}
+
+.notification-row {
+  background: transparent;
+  outline: none;
+}
+
+.notification-row .notification-background {
+  padding: 4px 5px;
+}
+
+.notification-row .notification-background .notification {
+  background: alpha(@surface_container_high, 0.98);
+  border: 1px solid @outline_variant;
+  border-radius: 13px;
+  box-shadow: none;
+}
+
+.notification-row .notification-background .notification.critical {
+  border-color: @error;
+}
+
+.notification-row .notification-background .notification .notification-default-action {
+  border-radius: 13px;
+  padding: 5px;
+}
+
+.notification-row .notification-background .notification .notification-default-action:hover,
+.control-center .control-center-list .notification .notification-default-action:hover,
+.control-center .control-center-list .notification .notification-action:hover {
+  background: @surface_container_highest;
+}
+
+.notification-content .summary {
+  color: @on_surface;
+  font-weight: 800;
+}
+
+.notification-content .time,
+.notification-content .body {
+  color: @on_surface_variant;
+}
+
+.close-button {
+  background: @error_container;
+  color: @on_error_container;
+  border: none;
+  border-radius: 99px;
+  margin: 7px;
+  min-width: 22px;
+  min-height: 22px;
+  box-shadow: none;
+}
+
+.close-button:hover {
+  background: @error;
+  color: @on_error;
+}
+
+.notification-action {
+  background: @secondary_container;
+  color: @on_secondary_container;
+  border-radius: 9px;
+  margin: 4px;
+  padding: 6px;
+}
+
+.control-center-list-placeholder {
+  color: @on_surface_variant;
+  padding: 24px;
+}

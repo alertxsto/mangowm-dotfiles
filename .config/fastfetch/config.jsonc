@@ -1,0 +1,125 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": {
+    "type": "kitty-direct",
+    "source": "~/.config/fastfetch/fastfetch-emblem.png",
+    "width": 28,
+    "height": 14,
+    "padding": {
+      "top": 5,
+      "right": 5,
+      "left": 3
+    }
+  },
+  "display": {
+    "color": {
+      "keys": "38;2;255;176;208"
+    },
+    "key": {
+      "width": 9
+    },
+    "separator": "  ",
+    "percent": {
+      "type": 9,
+      "color": {
+        "green": "38;2;241;187;152",
+        "yellow": "38;2;225;189;202",
+        "red": "38;2;255;180;171"
+      }
+    }
+  },
+  "modules": [
+    "break",
+    {
+      "type": "title",
+      "format": "\u001b[1;38;2;238;223;226m{user-name}\u001b[0m\u001b[38;2;212;194;199m @ \u001b[0m\u001b[1;38;2;238;223;226m{host-name}\u001b[0m"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[38;2;255;176;208m\u25a0\u001b[0m \u001b[38;2;212;194;199mARTIX \u00b7 MANGO \u00b7 a Matugen desktop\u001b[0m"
+    },
+    "break",
+    {
+      "type": "custom",
+      "format": "\u001b[38;2;255;176;208m\u2500\u2500\u001b[0m \u001b[1;38;2;238;223;226mVITALS\u001b[0m \u001b[38;2;102;88;93m\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u001b[0m"
+    },
+    {
+      "type": "cpu",
+      "key": "CPU"
+    },
+    {
+      "type": "gpu",
+      "key": "GPU",
+      "detectionMethod": "pci"
+    },
+    {
+      "type": "memory",
+      "key": "MEMORY"
+    },
+    {
+      "type": "disk",
+      "key": "DISK",
+      "folders": "/"
+    },
+    {
+      "type": "battery",
+      "key": "BATTERY"
+    },
+    "break",
+    {
+      "type": "custom",
+      "format": "\u001b[38;2;255;176;208m\u2500\u2500\u001b[0m \u001b[1;38;2;238;223;226mSYSTEM\u001b[0m \u001b[38;2;102;88;93m\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u001b[0m"
+    },
+    {
+      "type": "os",
+      "key": "OS"
+    },
+    {
+      "type": "kernel",
+      "key": "KERNEL"
+    },
+    {
+      "type": "wm",
+      "key": "WM"
+    },
+    {
+      "type": "shell",
+      "key": "SHELL"
+    },
+    {
+      "type": "packages",
+      "key": "PKGS"
+    },
+    "break",
+    {
+      "type": "custom",
+      "format": "\u001b[38;2;255;176;208m\u2500\u2500\u001b[0m \u001b[1;38;2;238;223;226mSESSION\u001b[0m \u001b[38;2;102;88;93m\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u001b[0m"
+    },
+    {
+      "type": "uptime",
+      "key": "UPTIME"
+    },
+    {
+      "type": "display",
+      "key": "DISPLAY",
+      "compactType": "original-with-refresh-rate"
+    },
+    {
+      "type": "terminal",
+      "key": "TERM"
+    },
+    {
+      "type": "localip",
+      "key": "LOCAL IP",
+      "showIpv4": true,
+      "showIpv6": false
+    },
+    "break",
+    {
+      "type": "colors",
+      "symbol": "circle",
+      "paddingLeft": 2
+    },
+    "break"
+  ]
+}

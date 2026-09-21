@@ -1,0 +1,239 @@
+@import "colors.css";
+
+* {
+  border: none;
+  border-radius: 0;
+  min-height: 0;
+  font-family: "JetBrainsMono Nerd Font", "Font Awesome 7 Free";
+  font-size: 12px;
+  font-weight: 700;
+}
+
+window#waybar {
+  background: transparent;
+  color: @on_surface;
+}
+
+.modules-left,
+.modules-center,
+.modules-right {
+  background: alpha(@surface_container, 0.94);
+  border: 1px solid alpha(@outline_variant, 0.72);
+  border-radius: 12px;
+  box-shadow: 0 3px 10px alpha(@shadow, 0.55);
+  padding: 2px 6px;
+}
+.modules-right {
+  padding: 3px 4px;
+}
+
+button {
+  box-shadow: none;
+  text-shadow: none;
+  background: transparent;
+  color: @on_surface_variant;
+  transition: all 180ms ease;
+}
+
+button:hover {
+  background: alpha(@primary_container, 0.65);
+  color: @on_primary_container;
+  border-radius: 8px;
+}
+
+#custom-launcher {
+  color: @primary;
+  font-size: 17px;
+  padding: 0 9px 0 5px;
+}
+
+#workspaces {
+  padding: 0 2px;
+}
+
+#custom-workspace1,
+#custom-workspace2,
+#custom-workspace3,
+#custom-workspace4,
+#custom-workspace5,
+#custom-workspace6,
+#custom-workspace7,
+#custom-workspace8,
+#custom-workspace9 {
+  color: @on_surface_variant;
+  background: transparent;
+  min-width: 26px;
+  min-height: 26px;
+  margin: 2px 1px;
+  padding: 0;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+#custom-workspace1.empty,
+#custom-workspace2.empty,
+#custom-workspace3.empty,
+#custom-workspace4.empty,
+#custom-workspace5.empty,
+#custom-workspace6.empty,
+#custom-workspace7.empty,
+#custom-workspace8.empty,
+#custom-workspace9.empty {
+  color: alpha(@on_surface_variant, 0.38);
+  box-shadow: inset 0 0 0 1px alpha(@outline_variant, 0.22);
+}
+
+#custom-workspace1.occupied,
+#custom-workspace2.occupied,
+#custom-workspace3.occupied,
+#custom-workspace4.occupied,
+#custom-workspace5.occupied,
+#custom-workspace6.occupied,
+#custom-workspace7.occupied,
+#custom-workspace8.occupied,
+#custom-workspace9.occupied {
+  color: @on_surface;
+  background: @surface_container_high;
+  box-shadow: inset 0 -2px @primary;
+}
+
+#custom-workspace1.active,
+#custom-workspace2.active,
+#custom-workspace3.active,
+#custom-workspace4.active,
+#custom-workspace5.active,
+#custom-workspace6.active,
+#custom-workspace7.active,
+#custom-workspace8.active,
+#custom-workspace9.active {
+  color: @on_primary;
+  background: @primary;
+  box-shadow: none;
+}
+
+#custom-workspace1.urgent,
+#custom-workspace2.urgent,
+#custom-workspace3.urgent,
+#custom-workspace4.urgent,
+#custom-workspace5.urgent,
+#custom-workspace6.urgent,
+#custom-workspace7.urgent,
+#custom-workspace8.urgent,
+#custom-workspace9.urgent {
+  color: @on_error;
+  background: @error;
+  box-shadow: none;
+}
+
+#custom-workspace1:hover,
+#custom-workspace2:hover,
+#custom-workspace3:hover,
+#custom-workspace4:hover,
+#custom-workspace5:hover,
+#custom-workspace6:hover,
+#custom-workspace7:hover,
+#custom-workspace8:hover,
+#custom-workspace9:hover {
+  color: @on_surface;
+  background: alpha(@primary, 0.20);
+}
+
+#mpris {
+  color: @tertiary;
+  margin-left: 7px;
+  padding: 0 8px;
+}
+
+#clock {
+  color: @on_primary_container;
+  background: @primary_container;
+  border-radius: 9px;
+  padding: 0 13px;
+  margin: 2px;
+}
+
+#tray,
+#idle_inhibitor,
+#power-profiles-daemon,
+#network,
+#pulseaudio,
+#cpu,
+#memory,
+#temperature,
+#backlight,
+#battery,
+#custom-notification {
+  min-height: 26px;
+  margin: 2px;
+  padding: 0 8px;
+  color: @on_surface;
+  background: alpha(@surface_container_high, 0.76);
+  border: 1px solid alpha(@outline_variant, 0.32);
+  border-radius: 8px;
+  font-size: 12px;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+#tray:hover,
+#idle_inhibitor:hover,
+#power-profiles-daemon:hover,
+#network:hover,
+#pulseaudio:hover,
+#cpu:hover,
+#memory:hover,
+#temperature:hover,
+#backlight:hover,
+#battery:hover,
+#custom-notification:hover {
+  background: alpha(@primary_container, 0.54);
+  border-color: alpha(@primary, 0.42);
+}
+
+#idle_inhibitor.activated,
+#network,
+#pulseaudio,
+#custom-notification {
+  color: @primary;
+}
+
+#cpu {
+  color: @secondary;
+}
+
+#memory,
+#backlight,
+#power-profiles-daemon.power-saver {
+  color: @tertiary;
+}
+
+#power-profiles-daemon.balanced {
+  color: @secondary;
+}
+
+#power-profiles-daemon.performance {
+  color: @primary;
+}
+
+#temperature.critical,
+#cpu.critical,
+#memory.critical,
+#battery.critical:not(.charging) {
+  color: @error;
+}
+
+#battery.warning:not(.charging),
+#cpu.warning,
+#memory.warning {
+  color: @secondary;
+}
+
+tooltip {
+  background: @surface_container_high;
+  border: 1px solid @outline_variant;
+  border-radius: 10px;
+}
+
+tooltip label {
+  color: @on_surface;
+  padding: 6px;
+}

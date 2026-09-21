@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Pushes workspace changes into Waybar immediately. mmsg emits the current tag
+# state continuously; duplicate frames are discarded before signalling the nine
+# clickable modules.
+set -uo pipefail
+
+runtime="${XDG_RUNTIME_DIR:-/tmp}"
+exec 9>"$runtime/mango-workspace-watch.lock"
+flock -n 9 || exit 0
+cache="$runtime/mango-workspaces.json"
+declare -a previous
+last=""
+
+fingerprint() {
+  local index="$1" chunk
+  chunk="${state#*\"index\":$index,}"
+  [[ "$chunk" != "$state" ]] || return 1
+  printf '%s' "${chunk%%\}*}"
+}
+
+while true; do
+  while IFS= read -r state; do
+    [[ -n "$state" && "$state" != "$last" ]] || continue
+    last="$state"
+    printf '%s\n' "$state" > "$cache.tmp"
+    mv "$cache.tmp" "$cache"
+
+    for index in {1..9}; do
+      current="$(fingerprint "$index")" || continue
+      [[ "$current" == "${previous[$index]:-}" ]] && continue
+      previous[$index]="$current"
+      while IFS= read -r pid; do
+        kill "-$((34 + index))" "$pid" 2>/dev/null || true
+      done < <(pgrep -x waybar)
+    done
+  done < <(mmsg watch all-tags 2>/dev/null)
+  sleep 0.2
+done

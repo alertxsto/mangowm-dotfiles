@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! pgrep -f -x "$HOME/.local/bin/wallpaper-overview" >/dev/null; then
+  exec "$HOME/.local/bin/wallpaper-overview"
+fi

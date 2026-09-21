@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+device="${BACKLIGHT_DEVICE:-amdgpu_bl2}"
+step="${BACKLIGHT_STEP:-5}"
+
+case "${1:-}" in
+  up)
+    brightnessctl --device "$device" set "${step}%+" >/dev/null
+    ;;
+  down)
+    brightnessctl --device "$device" set "${step}%-" >/dev/null
+    ;;
+  set)
+    [[ "${2:-}" =~ ^[0-9]{1,3}$ ]] || exit 2
+    brightnessctl --device "$device" set "${2}%" >/dev/null
+    ;;
+  get)
+    brightnessctl --device "$device" --machine-readable info | cut -d, -f4 | tr -d '%'
+    exit 0
+    ;;
+  *)
+    printf 'Usage: %s {up|down|set PERCENT|get}\n' "$0" >&2
+    exit 2
+    ;;
+esac
+
+percent="$(brightnessctl --device "$device" --machine-readable info | cut -d, -f4 | tr -d '%')"
+"$HOME/.local/bin/mango-osd" brightness "$percent" >/dev/null 2>&1 || true

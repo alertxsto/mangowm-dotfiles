@@ -1,0 +1,5 @@
+[Libinput][1267][12474][ELAN1200:00 04F3:30BA Touchpad]
+NaturalScroll=true
+
+[Mouse]
+cursorTheme=Oxygen_Yellow

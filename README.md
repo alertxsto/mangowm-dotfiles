@@ -1,40 +1,64 @@
+<div align="center">
+
 # MangoWM Dotfiles
 
-A complete Artix Linux desktop built around [MangoWM](https://github.com/mangowm/mango), dynamic Matugen colors, and small native Qt utilities.
+**A cohesive, wallpaper-driven Wayland desktop for Artix Linux.**
 
-The repository mirrors the active desktop configuration, but excludes credentials, personal media, caches, and stale settings from other desktop sessions. See [`AUDIT.md`](AUDIT.md) for the full system audit and inclusion policy.
+[![Artix Linux](https://img.shields.io/badge/Artix_Linux-1793D1?style=for-the-badge&logo=archlinux&logoColor=white)](https://artixlinux.org/) [![Wayland](https://img.shields.io/badge/Wayland-111111?style=for-the-badge&logo=wayland&logoColor=white)](https://wayland.freedesktop.org/) [![MangoWM](https://img.shields.io/badge/MangoWM-Dynamic-8FA4B8?style=for-the-badge)](https://github.com/mangowm/mango) [![Matugen](https://img.shields.io/badge/Matugen-Material_You-CFA6A6?style=for-the-badge)](https://github.com/InioX/matugen)
+
+<img src="assets/desktop.webp" alt="MangoWM desktop with Waybar, Kitty, and Fastfetch" width="100%">
+
+<sub>MangoWM · Waybar · SwayNC · Rofi · Kitty · Matugen · OpenRC</sub>
+
+<br><br>
+
+[Showcase](#showcase) · [Features](#highlights) · [Install](#installation) · [Keybindings](#keybindings) · [Architecture](#dynamic-theming)
+
+</div>
+
+## Showcase
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="assets/wallpaper-picker.webp" alt="Full-screen wallpaper picker">
+      <br>
+      <sub><b>Wallpaper gallery</b> — search, browse, preview, and recolor the complete desktop.</sub>
+    </td>
+    <td width="50%">
+      <img src="assets/launcher.webp" alt="Rofi application launcher">
+      <br>
+      <sub><b>Command center</b> — a focused Rofi launcher using the generated palette.</sub>
+    </td>
+  </tr>
+</table>
+
+> One wallpaper selection regenerates a consistent palette across the compositor, shell, terminal, launcher, notifications, GTK, KDE, and folder icons.
+
+This repository is an audited snapshot of the active desktop—not a loose collection of example configs. It excludes credentials, personal media, caches, generated binaries, and stale settings from other desktop sessions. The complete inclusion policy lives in [`AUDIT.md`](AUDIT.md).
 
 ## Desktop stack
 
-| Area | Component |
+| Layer | Choice |
 |---|---|
 | Distribution / init | Artix Linux / OpenRC |
-| Login manager | SDDM |
-| Wayland compositor | MangoWM |
-| Bar | Waybar |
-| Notifications and control center | SwayNC |
-| Launcher | Rofi |
-| Terminal | Kitty |
-| Shell and prompt | Fish + Starship |
-| System information | Fastfetch |
-| File manager | Dolphin |
-| Wallpaper | swaybg + custom Qt gallery |
-| Color generation | Matugen SchemeSmart |
-| Audio | PipeWire + WirePlumber |
-| Network | NetworkManager + custom Qt popup |
-| Toolkit theme | KDE colors + GTK3/GTK4 CSS + dynamic Breeze folders |
+| Login / session | SDDM / Wayland |
+| Compositor | MangoWM |
+| Bar / notifications | Waybar / SwayNC |
+| Launcher / terminal | Rofi / Kitty |
+| Shell / prompt | Fish / Starship |
+| Wallpaper / colors | Custom Qt gallery / Matugen SchemeSmart |
+| Audio / network | PipeWire + WirePlumber / NetworkManager |
+| Desktop integration | Dolphin + KDE colors + GTK3/GTK4 CSS |
 
 ## Highlights
 
-- MangoWM animations, blur, nine tags, touchpad gestures, and directional navigation.
-- Material You palette generated from the selected wallpaper.
-- One palette shared by MangoWM, Waybar, SwayNC, Rofi, Kitty, Fish, Starship, Fastfetch, KDE, GTK, and folder icons.
-- Custom Mango tag indicators in Waybar, updated from Mango IPC without polling `jq`.
-- Full-screen searchable wallpaper gallery with thumbnail caching.
-- Native NetworkManager Wi-Fi popup.
-- Native volume and brightness OSD.
-- Artix/OpenRC service setup for SDDM, D-Bus, NetworkManager, PipeWire, WirePlumber, and power profiles.
-- Safe, repeatable installer with backups and automatic hardware adaptation.
+- **One-command recoloring.** Matugen propagates the wallpaper palette through MangoWM, Waybar, SwayNC, Rofi, Kitty, Fish, Starship, Fastfetch, KDE, GTK, and Breeze folder icons.
+- **Purpose-built desktop tools.** Native Qt wallpaper gallery, NetworkManager Wi-Fi popup, and volume/brightness OSD.
+- **Responsive workflow.** Nine tags, directional navigation, touchpad gestures, blur, animations, scratchpads, and a compact status bar.
+- **Event-driven status.** Custom Mango tag indicators update from compositor IPC instead of polling through `jq`.
+- **Audited deployment.** The installer adapts hardware names, builds local tools from source, configures OpenRC services, and backs up every conflict.
+- **Repeatable installation.** Identical files and matching symlinks are left untouched, making subsequent installs idempotent.
 
 ## Installation
 

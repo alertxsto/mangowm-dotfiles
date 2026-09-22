@@ -25,11 +25,14 @@ Window {
 
     function showOsd() {
         hideAnimation.stop()
-        entrance.stop()
-        root.visible = true
-        panel.scale = 0.97
-        entrance.restart()
         hideTimer.restart()
+        if (root.visible) {
+            panel.opacity = 1
+            return
+        }
+        panel.opacity = 0
+        root.visible = true
+        entrance.restart()
     }
 
     Timer {
@@ -39,44 +42,24 @@ Window {
         onTriggered: hideAnimation.restart()
     }
 
-    ParallelAnimation {
+    NumberAnimation {
         id: entrance
-        NumberAnimation {
-            target: panel
-            property: "scale"
-            from: 0.97
-            to: 1
-            duration: 150
-            easing.type: Easing.OutCubic
-        }
-        NumberAnimation {
-            target: panel
-            property: "opacity"
-            from: 0.72
-            to: 1
-            duration: 120
-            easing.type: Easing.OutCubic
-        }
+        target: panel
+        property: "opacity"
+        from: 0
+        to: 1
+        duration: 110
+        easing.type: Easing.OutCubic
     }
 
-    ParallelAnimation {
+    NumberAnimation {
         id: hideAnimation
-        NumberAnimation {
-            target: panel
-            property: "scale"
-            from: 1
-            to: 0.98
-            duration: 150
-            easing.type: Easing.InCubic
-        }
-        NumberAnimation {
-            target: panel
-            property: "opacity"
-            from: 1
-            to: 0
-            duration: 150
-            easing.type: Easing.InCubic
-        }
+        target: panel
+        property: "opacity"
+        from: 1
+        to: 0
+        duration: 130
+        easing.type: Easing.InCubic
         onFinished: root.visible = false
     }
 

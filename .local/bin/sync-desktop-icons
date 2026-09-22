@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates a small Breeze overlay whose folder colour follows Matugen.
+"""Generates a small Breeze overlay whose folder colour follows the active theme.
 
 The theme name includes the accent hex. Changing wallpapers therefore changes
 QIcon's theme identity instead of relying on stale per-process pixmap caches.
@@ -110,7 +110,7 @@ def build(name: str, primary: str, on_surface: str) -> None:
     lines = [
         "[Icon Theme]",
         f"Name={name}",
-        "Comment=Matugen-coloured Breeze folders",
+        "Comment=Mango theme-coloured Breeze folders",
         "Inherits=breeze-dark,hicolor",
         "Directories=" + ",".join(sorted(directories)),
     ]

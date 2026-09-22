@@ -3,21 +3,27 @@ import QtQuick.Window
 
 Window {
     id: root
+    width: 1180
+    height: 560
+    x: Math.round((Screen.width - width) / 2)
+    y: Math.max(52, Math.round((Screen.height - height) / 2))
     visible: true
-    visibility: Window.FullScreen
-    flags: Qt.FramelessWindowHint
+    color: "transparent"
+    flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
     title: "Mango Wallpaper Gallery"
-    color: colors.surface
 
     property var colors: themeColors
     property string selectedPath: ""
     property string activeCategory: "All"
+    property var visibleEntries: []
     property int matchCount: 0
-
-
+    readonly property real selectedCardWidth: 570
+    readonly property real selectedCardHeight: 321
+    readonly property real cardSeparation: 185
+    property bool everActive: false
 
     function entryAt(index) {
-        return index >= 0 && index < wallpaperEntries.length ? wallpaperEntries[index] : null
+        return index >= 0 && index < visibleEntries.length ? visibleEntries[index] : null
     }
 
     function entryMatches(entry) {
@@ -28,78 +34,78 @@ Window {
         return categoryMatch && (needle.length === 0 || entry.search.indexOf(needle) !== -1)
     }
 
-    function recount() {
-        let count = 0
-        for (let index = 0; index < wallpaperEntries.length; ++index)
+    function rebuildEntries(preferredPath) {
+        const current = entryAt(carousel.currentIndex)
+        const keepPath = preferredPath || (current ? current.path : "")
+        const filtered = []
+        for (let index = 0; index < wallpaperEntries.length; ++index) {
             if (entryMatches(wallpaperEntries[index]))
-                ++count
-        matchCount = count
-    }
+                filtered.push(wallpaperEntries[index])
+        }
 
-    function firstMatch() {
-        for (let index = 0; index < wallpaperEntries.length; ++index)
-            if (entryMatches(wallpaperEntries[index]))
-                return index
-        return -1
+        visibleEntries = filtered
+        matchCount = filtered.length
+        if (filtered.length === 0) {
+            carousel.currentIndex = -1
+            return
+        }
+
+        let nextIndex = 0
+        if (keepPath.length > 0) {
+            for (let index = 0; index < filtered.length; ++index) {
+                if (filtered[index].path === keepPath) {
+                    nextIndex = index
+                    break
+                }
+            }
+        }
+        carousel.currentIndex = nextIndex
+        Qt.callLater(function() {
+            carousel.positionViewAtIndex(nextIndex, ListView.Center)
+        })
     }
 
     function selectIndex(index) {
-        carousel.currentIndex = index
+        if (index >= 0 && index < visibleEntries.length)
+            carousel.currentIndex = index
     }
 
     function moveSelection(direction) {
-        if (wallpaperEntries.length === 0)
+        if (visibleEntries.length === 0)
             return
-        let index = carousel.currentIndex
-        for (let step = 0; step < wallpaperEntries.length; ++step) {
-            index = (index + direction + wallpaperEntries.length) % wallpaperEntries.length
-            if (entryMatches(wallpaperEntries[index])) {
-                selectIndex(index)
-                return
-            }
-        }
+        const index = (carousel.currentIndex + direction + visibleEntries.length)
+                    % visibleEntries.length
+        selectIndex(index)
     }
 
     function resetSelection() {
-        recount()
-        const index = firstMatch()
-        if (index >= 0)
-            selectIndex(index)
+        rebuildEntries("")
     }
 
     function applyCurrent() {
         const entry = entryAt(carousel.currentIndex)
-        if (entry && entryMatches(entry)) {
+        if (entry) {
             selectedPath = entry.path
             Qt.quit()
         }
     }
 
-    Image {
-        anchors.fill: parent
-        source: {
-            const entry = root.entryAt(carousel.currentIndex)
-            return entry ? entry.thumbnailUrl : ""
-        }
-        fillMode: Image.PreserveAspectCrop
-        asynchronous: false
-        opacity: 0.16
+    Component.onCompleted: {
+        const initial = initialWallpaperIndex >= 0
+                      && initialWallpaperIndex < wallpaperEntries.length
+                      ? wallpaperEntries[initialWallpaperIndex].path : ""
+        rebuildEntries(initial)
+        activationTimer.start()
+    }
+    onActiveChanged: {
+        if (active)
+            everActive = true
+        else if (everActive)
+            closeTimer.restart()
     }
 
-    Rectangle {
-        anchors.fill: parent
-        color: colors.surface
-        opacity: 0.88
-    }
-
-    Rectangle {
-        anchors.fill: parent
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: "#14000000" }
-            GradientStop { position: 0.52; color: "#56000000" }
-            GradientStop { position: 1.0; color: colors.surface }
-        }
-    }
+    Timer { id: activationTimer; interval: 180; onTriggered: root.requestActivate() }
+    Timer { id: closeTimer; interval: 220; onTriggered: if (!root.active) Qt.quit() }
 
     Item {
         id: keyboard
@@ -133,7 +139,8 @@ Window {
                 searchField.text = searchField.text.slice(0, -1)
                 root.resetSelection()
                 event.accepted = true
-            } else if (event.text && event.text.length === 1 && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
+            } else if (event.text && event.text.length === 1
+                       && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
                 searchField.text += event.text
                 root.resetSelection()
                 event.accepted = true
@@ -141,79 +148,96 @@ Window {
         }
     }
 
-    Column {
-        id: heading
-        x: 72
-        y: 52
-        spacing: 6
-
-        Text {
-            text: "WALLPAPER / THEMES"
-            color: colors.primary
-            font.family: "JetBrainsMono Nerd Font"
-            font.pixelSize: 13
-            font.weight: Font.DemiBold
-            font.letterSpacing: 2.4
-        }
-        Text {
-            text: "Pick a scene.\nRecolor the whole desktop."
-            color: colors.onSurface
-            font.family: "JetBrainsMono Nerd Font"
-            font.pixelSize: 32
-            font.weight: Font.Bold
-            lineHeight: 0.94
-        }
-    }
-
     Rectangle {
-        id: searchBox
-        anchors.right: parent.right
-        anchors.rightMargin: 72
-        y: 66
-        width: 360
-        height: 48
-        radius: 14
-        color: colors.surfaceContainer
+        id: topBar
+        x: 18
+        y: 10
+        width: parent.width - 36
+        height: 62
+        radius: 20
+        color: Qt.rgba(colors.surface.r, colors.surface.g, colors.surface.b, 0.96)
         border.width: 1
-        border.color: searchField.text.length > 0 ? colors.primary : colors.outlineVariant
+        border.color: colors.outlineVariant
 
-        Text {
-            x: 16
+        Row {
+            anchors.left: parent.left
+            anchors.leftMargin: 20
             anchors.verticalCenter: parent.verticalCenter
-            text: "󰍉"
-            color: colors.primary
-            font.family: "JetBrainsMono Nerd Font"
-            font.pixelSize: 18
+            spacing: 14
+
+            Text {
+                text: "󰸉"
+                color: colors.primary
+                font.family: "JetBrainsMono Nerd Font"
+                font.pixelSize: 22
+            }
+            Column {
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 1
+                Text {
+                    text: "WALLPAPER"
+                    color: colors.onSurface
+                    font.family: "JetBrainsMono Nerd Font"
+                    font.pixelSize: 15
+                    font.weight: Font.Bold
+                    font.letterSpacing: 1.2
+                }
+                Text {
+                    text: "← → browse  ·  Enter apply  ·  Esc close"
+                    color: colors.onSurfaceVariant
+                    font.family: "JetBrainsMono Nerd Font"
+                    font.pixelSize: 9
+                }
+            }
         }
-        TextInput {
-            id: searchField
-            x: 48
-            width: parent.width - 64
+
+        Rectangle {
+            anchors.right: parent.right
+            anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
-            readOnly: true
-            color: colors.onSurface
-            selectionColor: colors.primaryContainer
-            font.family: "JetBrainsMono Nerd Font"
-            font.pixelSize: 13
-        }
-        Text {
-            x: 48
-            anchors.verticalCenter: parent.verticalCenter
-            visible: searchField.text.length === 0
-            text: "Type to filter wallpapers"
-            color: colors.onSurfaceVariant
-            opacity: 0.72
-            font.family: "JetBrainsMono Nerd Font"
-            font.pixelSize: 13
+            width: 310
+            height: 40
+            radius: 13
+            color: colors.surfaceContainer
+            border.width: 1
+            border.color: searchField.text.length > 0 ? colors.primary : colors.outlineVariant
+
+            Text {
+                x: 14
+                anchors.verticalCenter: parent.verticalCenter
+                text: "󰍉"
+                color: colors.primary
+                font.family: "JetBrainsMono Nerd Font"
+                font.pixelSize: 16
+            }
+            TextInput {
+                id: searchField
+                x: 42
+                width: parent.width - 56
+                anchors.verticalCenter: parent.verticalCenter
+                readOnly: true
+                color: colors.onSurface
+                font.family: "JetBrainsMono Nerd Font"
+                font.pixelSize: 12
+            }
+            Text {
+                x: 42
+                anchors.verticalCenter: parent.verticalCenter
+                visible: searchField.text.length === 0
+                text: "Type to filter"
+                color: colors.onSurfaceVariant
+                font.family: "JetBrainsMono Nerd Font"
+                font.pixelSize: 11
+            }
         }
     }
 
     Flickable {
         id: categoryViewport
-        x: 72
-        y: 164
-        width: parent.width - 144
-        height: 42
+        x: 22
+        y: 82
+        width: parent.width - 44
+        height: 36
         contentWidth: categoryRow.width
         contentHeight: height
         clip: true
@@ -221,14 +245,15 @@ Window {
 
         Row {
             id: categoryRow
-            spacing: 8
+            spacing: 7
             property int activeIndex: Math.max(0, categoryNames.indexOf(root.activeCategory))
 
             function selectAdjacent(direction) {
                 activeIndex = (activeIndex + direction + categoryNames.length) % categoryNames.length
                 root.activeCategory = categoryNames[activeIndex]
                 root.resetSelection()
-                categoryViewport.contentX = Math.max(0, Math.min(children[activeIndex].x - 72, categoryViewport.contentWidth - categoryViewport.width))
+                categoryViewport.contentX = Math.max(0, Math.min(children[activeIndex].x - 20,
+                                                                 categoryViewport.contentWidth - categoryViewport.width))
             }
 
             Repeater {
@@ -236,10 +261,11 @@ Window {
                 delegate: Rectangle {
                     required property int index
                     required property string modelData
-                    width: categoryLabel.implicitWidth + 26
-                    height: 34
-                    radius: 10
-                    color: root.activeCategory === modelData ? colors.primaryContainer : colors.surfaceContainer
+                    width: categoryLabel.implicitWidth + 24
+                    height: 32
+                    radius: 12
+                    color: root.activeCategory === modelData ? colors.primaryContainer
+                                                             : Qt.rgba(colors.surface.r, colors.surface.g, colors.surface.b, 0.94)
                     border.width: 1
                     border.color: root.activeCategory === modelData ? colors.primary : colors.outlineVariant
 
@@ -249,9 +275,9 @@ Window {
                         text: modelData.toUpperCase()
                         color: root.activeCategory === modelData ? colors.onPrimaryContainer : colors.onSurfaceVariant
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 11
+                        font.pixelSize: 9
                         font.weight: Font.DemiBold
-                        font.letterSpacing: 0.8
+                        font.letterSpacing: 0.6
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -268,253 +294,211 @@ Window {
         }
     }
 
-    Rectangle {
-        id: heroCard
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: 214
-        width: Math.min(840, parent.width * 0.55)
-        height: width * 9 / 16
-        radius: 22
-        clip: true
-        color: colors.surfaceContainer
-        border.width: 2
-        border.color: colors.primary
-
-        Image {
-            anchors.fill: parent
-            source: {
-                const entry = root.entryAt(carousel.currentIndex)
-                return entry ? entry.thumbnailUrl : ""
-            }
-            fillMode: Image.PreserveAspectFit
-            asynchronous: false
-            cache: true
-        }
-
-        Rectangle {
-            anchors.fill: parent
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: "#00000000" }
-                GradientStop { position: 0.62; color: "#08000000" }
-                GradientStop { position: 1.0; color: "#dc000000" }
-            }
-        }
-
-        Column {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            anchors.margins: 24
-            spacing: 6
-
-            Text {
-                text: {
-                    const entry = root.entryAt(carousel.currentIndex)
-                    return entry ? entry.category.toUpperCase() + "  /  " + entry.detail.toUpperCase() : ""
-                }
-                color: colors.primary
-                font.family: "JetBrainsMono Nerd Font"
-                font.pixelSize: 11
-                font.weight: Font.Bold
-                font.letterSpacing: 1.4
-            }
-
-            Text {
-                width: parent.width
-                text: {
-                    const entry = root.entryAt(carousel.currentIndex)
-                    return entry ? entry.name : ""
-                }
-                elide: Text.ElideRight
-                color: "#ffffff"
-                font.family: "JetBrainsMono Nerd Font"
-                font.pixelSize: 24
-                font.weight: Font.Bold
-            }
-        }
-
-        MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.PointingHandCursor
-            onClicked: keyboard.forceActiveFocus()
-            onDoubleClicked: root.applyCurrent()
-        }
-    }
-
-    NumberAnimation {
-        id: heroPulse
-        target: heroCard
-        property: "scale"
-        from: 0.985
-        to: 1.0
-        duration: 160
-        easing.type: Easing.OutCubic
-    }
-
     ListView {
         id: carousel
-        x: 72
-        y: heroCard.y + heroCard.height + 18
-        width: parent.width - 144
-        height: 116
+        x: 18
+        y: 126
+        width: parent.width - 36
+        height: 372
         orientation: ListView.Horizontal
-        model: wallpaperEntries
-        header: Item { width: Math.max(0, carousel.width * 0.5 - 95); height: 1 }
-        footer: Item { width: Math.max(0, carousel.width * 0.5 - 95); height: 1 }
-        cacheBuffer: 1100
-        currentIndex: initialWallpaperIndex
+        model: root.visibleEntries
+        header: Item { width: Math.max(0, (carousel.width - 190) * 0.5); height: 1 }
+        footer: Item { width: Math.max(0, (carousel.width - 190) * 0.5); height: 1 }
+        cacheBuffer: 1600
+        currentIndex: -1
         clip: true
-        spacing: 0
-        boundsBehavior: Flickable.StopAtBounds
+        spacing: 12
+        boundsBehavior: Flickable.DragOverBounds
+        flickDeceleration: 2600
+        maximumFlickVelocity: 1300
+        snapMode: ListView.SnapToItem
         highlightRangeMode: ListView.StrictlyEnforceRange
-        preferredHighlightBegin: width * 0.5 - 95
-        preferredHighlightEnd: width * 0.5 + 95
-        highlightMoveDuration: 130
+        preferredHighlightBegin: (width - 190) * 0.5
+        preferredHighlightEnd: (width - 190) * 0.5
+        highlightMoveDuration: 420
         keyNavigationWraps: true
-        onCurrentIndexChanged: heroPulse.restart()
 
         delegate: Item {
-            id: cardSlot
+            id: slot
             required property int index
             required property var modelData
-            property bool chosen: ListView.isCurrentItem
-            property bool matches: root.entryMatches(modelData)
-            visible: matches
-            width: matches ? 190 : 0
+            readonly property bool chosen: ListView.isCurrentItem
+            readonly property int distanceFromCurrent: Math.abs(index - carousel.currentIndex)
+            readonly property real separation: chosen ? 0
+                                               : index < carousel.currentIndex
+                                                 ? -root.cardSeparation : root.cardSeparation
+            width: 190
             height: carousel.height
-
-            // Animated frame/lift so the cursor is unmistakable while browsing.
-            Rectangle {
-                anchors.centerIn: card
-                width: card.width + 10
-                height: card.height + 10
-                radius: card.radius + 5
-                color: "transparent"
-                border.width: 2
-                border.color: card.frameColor
-                opacity: cardSlot.chosen ? 0.45 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-            }
+            z: chosen ? 20 : cardMouse.containsMouse ? 5 : 1
 
             Rectangle {
                 id: card
-                width: 170
-                height: 96
                 anchors.centerIn: parent
-                anchors.verticalCenterOffset: cardSlot.chosen ? -5 : 0
-                radius: 12
+                width: slot.chosen ? root.selectedCardWidth : 154
+                height: slot.chosen ? root.selectedCardHeight : 248
+                radius: 8
                 clip: true
                 color: colors.surfaceContainer
-                property bool hovered: cardMouse.containsMouse
-                property color frameColor: cardSlot.chosen ? colors.primary
-                                      : hovered ? colors.primary
-                                      : colors.outlineVariant
-                opacity: cardSlot.chosen ? 1.0 : 0.68
-                scale: cardSlot.chosen ? 1.06 : hovered ? 1.02 : 1.0
-                border.width: cardSlot.chosen ? 2 : 1
-                border.color: frameColor
+                border.width: slot.chosen ? 2 : 1
+                border.color: slot.chosen ? colors.primary : colors.outlineVariant
+                opacity: slot.chosen ? 1
+                                     : slot.distanceFromCurrent === 1
+                                       ? cardMouse.containsMouse ? 0.94 : 0.78
+                                       : cardMouse.containsMouse ? 0.82 : 0.5
+                scale: slot.chosen ? 1
+                                   : cardMouse.containsMouse ? 0.94
+                                   : slot.distanceFromCurrent === 1 ? 0.9 : 0.84
+                transform: Translate {
+                    x: slot.separation
+                    y: slot.chosen ? 0 : slot.distanceFromCurrent === 1 ? 14 : 28
+                    Behavior on x {
+                        NumberAnimation { duration: 420; easing.type: Easing.OutQuint }
+                    }
+                    Behavior on y {
+                        NumberAnimation { duration: 360; easing.type: Easing.OutQuint }
+                    }
+                }
 
-                Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-                Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-                Behavior on frameColor { ColorAnimation { duration: 140 } }
-                Behavior on anchors.verticalCenterOffset {
-                    NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+                Behavior on width { NumberAnimation { duration: 380; easing.type: Easing.OutQuint } }
+                Behavior on height { NumberAnimation { duration: 380; easing.type: Easing.OutQuint } }
+                Behavior on radius { NumberAnimation { duration: 300; easing.type: Easing.OutQuint } }
+                Behavior on opacity { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
+                Behavior on scale { NumberAnimation { duration: 340; easing.type: Easing.OutQuint } }
+                Behavior on border.color { ColorAnimation { duration: 220 } }
+
+                Image {
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    source: slot.modelData.thumbnailUrl
+                    fillMode: Image.PreserveAspectCrop
+                    autoTransform: true
+                    asynchronous: false
+                    cache: true
+                    opacity: slot.chosen ? 0.18 : 1
+                    Behavior on opacity { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
                 }
 
                 Image {
                     anchors.fill: parent
-                    source: cardSlot.modelData.thumbnailUrl
-                    fillMode: Image.PreserveAspectFit
-                    asynchronous: false
+                    anchors.margins: 3
+                    source: slot.chosen ? slot.modelData.imageUrl : ""
+                    fillMode: Image.PreserveAspectCrop
+                    autoTransform: true
+                    asynchronous: true
                     cache: true
+                    opacity: slot.chosen && status === Image.Ready ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
                 }
 
                 Rectangle {
                     anchors.fill: parent
+                    anchors.margins: 3
                     gradient: Gradient {
-                        GradientStop { position: 0.35; color: "#00000000" }
-                        GradientStop { position: 1.0; color: "#c9000000" }
+                        GradientStop { position: slot.chosen ? 0.56 : 0.34; color: "#00000000" }
+                        GradientStop { position: 1.0; color: slot.chosen ? "#d9000000" : "#e6000000" }
                     }
                 }
 
-                Text {
+                Column {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
-                    anchors.margins: 9
-                    text: cardSlot.modelData.name
-                    elide: Text.ElideRight
-                    color: "#ffffff"
-                    font.family: "JetBrainsMono Nerd Font"
-                    font.pixelSize: 9
-                    font.weight: Font.DemiBold
+                    anchors.margins: slot.chosen ? 20 : 12
+                    spacing: slot.chosen ? 5 : 2
+
+                    Text {
+                        height: slot.chosen ? implicitHeight : 0
+                        opacity: slot.chosen ? 1 : 0
+                        clip: true
+                        text: slot.modelData.category.toUpperCase() + "  /  " + slot.modelData.detail.toUpperCase()
+                        color: colors.primary
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 10
+                        font.weight: Font.Bold
+                        font.letterSpacing: 1.2
+                        Behavior on height { NumberAnimation { duration: 260; easing.type: Easing.OutQuint } }
+                        Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                    }
+                    Text {
+                        width: parent.width
+                        text: slot.modelData.name
+                        elide: Text.ElideRight
+                        color: "#ffffff"
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: slot.chosen ? 20 : 10
+                        font.weight: Font.Bold
+                        Behavior on font.pixelSize { NumberAnimation { duration: 300; easing.type: Easing.OutQuint } }
+                    }
+                    Text {
+                        height: slot.chosen ? implicitHeight : 0
+                        opacity: slot.chosen ? 1 : 0
+                        clip: true
+                        text: "Double-click or press Enter to apply"
+                        color: "#c7ffffff"
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 9
+                        Behavior on height { NumberAnimation { duration: 260; easing.type: Easing.OutQuint } }
+                        Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                    }
                 }
+
 
                 MouseArea {
                     id: cardMouse
+                    z: 30
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        root.selectIndex(cardSlot.index)
+                        root.selectIndex(slot.index)
                         keyboard.forceActiveFocus()
                     }
                     onDoubleClicked: root.applyCurrent()
                 }
             }
-        }
-
-        Component.onCompleted: {
-            positionViewAtIndex(currentIndex, ListView.Center)
-            root.recount()
-            keyboard.forceActiveFocus()
-        }
+    }
     }
 
     Row {
-        anchors.left: parent.left
-        anchors.leftMargin: 72
+        anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 48
-        spacing: 12
+        anchors.bottomMargin: 10
+        spacing: 8
 
         Rectangle {
-            width: countLabel.implicitWidth + 24
+            width: countText.implicitWidth + 24
             height: 34
-            radius: 10
-            color: colors.primaryContainer
+            radius: 13
+            color: Qt.rgba(colors.surface.r, colors.surface.g, colors.surface.b, 0.96)
+            border.width: 1
+            border.color: colors.outlineVariant
             Text {
-                id: countLabel
+                id: countText
                 anchors.centerIn: parent
                 text: root.matchCount + " SCENES"
-                color: colors.onPrimaryContainer
+                color: colors.onSurfaceVariant
                 font.family: "JetBrainsMono Nerd Font"
-                font.pixelSize: 11
+                font.pixelSize: 9
                 font.weight: Font.Bold
             }
         }
-        Text {
-            anchors.verticalCenter: parent.verticalCenter
-            text: "↑↓ collection    ←→ browse    type search    ↵ apply    esc close"
-            color: colors.onSurfaceVariant
-            font.family: "JetBrainsMono Nerd Font"
-            font.pixelSize: 11
+        Rectangle {
+            width: indexText.implicitWidth + 24
+            height: 34
+            radius: 13
+            color: colors.primaryContainer
+            border.width: 1
+            border.color: colors.primary
+            Text {
+                id: indexText
+                anchors.centerIn: parent
+                text: String(carousel.currentIndex + 1).padStart(2, "0") + " / "
+                      + String(wallpaperEntries.length).padStart(2, "0")
+                color: colors.onPrimaryContainer
+                font.family: "JetBrainsMono Nerd Font"
+                font.pixelSize: 9
+                font.weight: Font.Bold
+            }
         }
-    }
-
-    Text {
-        anchors.right: parent.right
-        anchors.rightMargin: 72
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 55
-        text: {
-            const entry = root.entryAt(carousel.currentIndex)
-            return entry ? String(carousel.currentIndex + 1).padStart(2, "0") + " / " + String(wallpaperEntries.length).padStart(2, "0") : "00 / 00"
-        }
-        color: colors.primary
-        font.family: "JetBrainsMono Nerd Font"
-        font.pixelSize: 12
-        font.weight: Font.Bold
-        font.letterSpacing: 1.2
     }
 }

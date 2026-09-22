@@ -323,5 +323,19 @@ kwriteconfig6 --file kdeglobals --group General --key ColorScheme __MangoRefresh
 plasma-apply-colorscheme MangoDynamic >/dev/null
 kwriteconfig6 --file kdeglobals --group General --key Name "Mango Dynamic"
 kwriteconfig6 --file kdeglobals --group KDE --key ColorScheme MangoDynamic
+
+state_dir="${XDG_CACHE_HOME:-$HOME/.cache}/mango-theme"
+mode="$(<"$state_dir/mode" 2>/dev/null || printf 'dark')"
+prefer_dark=true
+color_scheme=prefer-dark
+if [[ "$mode" == light ]]; then
+  prefer_dark=false
+  color_scheme=prefer-light
+fi
+kwriteconfig6 --file "$gtk3_dir/settings.ini" --group Settings --key gtk-application-prefer-dark-theme "$prefer_dark"
+kwriteconfig6 --file "$gtk4_dir/settings.ini" --group Settings --key gtk-application-prefer-dark-theme "$prefer_dark"
+if command -v gsettings >/dev/null; then
+  gsettings set org.gnome.desktop.interface color-scheme "$color_scheme" >/dev/null 2>&1 || true
+fi
 "$HOME/.local/bin/sync-desktop-icons" >/dev/null
 "$HOME/.local/bin/sync-shell-theme"

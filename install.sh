@@ -182,8 +182,28 @@ install_tree() {
 
 install_file "$repo_dir/.bash_profile" '.bash_profile'
 install_file "$repo_dir/.bashrc" '.bashrc'
+# Make the user D-Bus address available to Mango-launched browser notifications.
+install_file "$repo_dir/.pam_environment" '.pam_environment'
 install_tree "$repo_dir/.config" '.config'
 install_tree "$repo_dir/.local" '.local'
+HOME="$target_home" XDG_CONFIG_HOME="$target_home/.config" \
+  "$target_home/.local/bin/sync-default-apps"
+
+# Keep the selected Waybar variant active after refreshing tracked files.
+waybar_mode_file="$target_home/.config/waybar/.mode"
+if [[ -r "$waybar_mode_file" ]]; then
+  waybar_mode="$(<"$waybar_mode_file")"
+  if [[ "$waybar_mode" == bar || "$waybar_mode" == dock ]]; then
+    cp -- "$target_home/.config/waybar/configs/$waybar_mode.jsonc" \
+      "$target_home/.config/waybar/config.jsonc"
+    cp -- "$target_home/.config/waybar/styles/$waybar_mode.css" \
+      "$target_home/.config/waybar/style.css"
+  fi
+fi
+
+# Clean cutover from the former wallpaper-derived Matugen pipeline.
+rm -rf -- "$target_home/.config/matugen"
+rm -f -- "$target_home/.config/fish/conf.d/matugen-colors.fish"
 
 adapt_hardware() {
   local wifi_interface='' backlight_path='' backlight_device=''
@@ -199,7 +219,6 @@ adapt_hardware() {
 
   if [[ -n "$wifi_interface" && "$wifi_interface" != wlan0 ]]; then
     sed -i "s/\"wlan0\"/\"$wifi_interface\"/g" \
-      "$target_home/.config/waybar/config.jsonc" \
       "$target_home/.local/share/network-popup/main.cpp"
   fi
 
@@ -236,7 +255,7 @@ build_native_utilities() {
   # A failed native build may leave this temporary directory for inspection.
   jobs="$(nproc)"
 
-  for project in network-popup mango-osd wallpaper-overview; do
+  for project in network-popup bluetooth-popup mango-osd wallpaper-overview; do
     project_dir="$build_root/$project"
     mkdir -p -- "$project_dir"
     (
@@ -259,6 +278,7 @@ enable_openrc_services() {
 
   sudo rc-update add dbus boot
   sudo rc-update add NetworkManager default
+  sudo rc-update add bluetoothd default
   sudo rc-update add power-profiles-daemon default
   sudo rc-update add sddm default
 

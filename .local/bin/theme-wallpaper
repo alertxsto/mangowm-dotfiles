@@ -22,7 +22,25 @@ if [[ -z "${wallpaper:-}" || ! -f "$wallpaper" ]]; then
 fi
 wallpaper="$(realpath "$wallpaper")"
 
-matugen image "$wallpaper" --mode dark --type scheme-smart --quiet
+relative="${wallpaper#*/Wallpapers/}"
+theme="${relative%%/*}"
+remainder="${relative#*/}"
+variant="${remainder%%/*}"
+theme="${theme,,}"
+theme="${theme//_/-}"
+variant="${variant,,}"
+
+case "$theme/$variant" in
+  catppuccin/dark|catppuccin/light|dracula/dark|everforest/dark|gruvbox/dark|gruvbox/light|material/dark|material/light|nord/dark|nord/light|osaka/dark|rose-pine/dark)
+    "$HOME/.local/bin/apply-named-theme" "$theme" "$variant"
+    ;;
+  *)
+    theme=material
+    variant=dark
+    "$HOME/.local/bin/apply-named-theme" "$theme" "$variant"
+    ;;
+esac
+
 "$HOME/.local/bin/sync-desktop-colors"
 printf '%s\n' "$wallpaper" > "$state_file"
 
@@ -34,5 +52,6 @@ fi
 mmsg dispatch reload_config >/dev/null 2>&1 || true
 pkill -USR2 waybar 2>/dev/null || true
 pkill -USR1 kitty 2>/dev/null || true
+pkill -USR2 btop 2>/dev/null || true
 swaync-client -R >/dev/null 2>&1 || true
 swaync-client -rs >/dev/null 2>&1 || true

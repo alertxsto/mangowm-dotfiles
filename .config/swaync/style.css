@@ -1,16 +1,15 @@
-@import url("/etc/xdg/swaync/style.css");
 @import "colors.css";
 
 :root {
-  --notification-icon-size: 48px;
-  --notification-app-icon-size: 20px;
-  --border-radius: 14px;
+  --notification-icon-size: 40px;
+  --notification-app-icon-size: 18px;
+  --border-radius: 12px;
   --font-size-body: 12px;
   --font-size-summary: 13px;
 }
 
 * {
-  font-family: "JetBrainsMono Nerd Font", "Font Awesome 7 Free", sans-serif;
+  font-family: "Roboto", "JetBrainsMono Nerd Font", "Font Awesome 7 Free", sans-serif;
   color: @on_surface;
 }
 
@@ -20,30 +19,32 @@ blankwindow {
 }
 
 .control-center {
-  background: alpha(@surface, 0.96);
-  border: 1px solid alpha(@outline_variant, 0.8);
-  border-radius: 18px;
-  box-shadow: 0 8px 24px alpha(@shadow, 0.6);
+  background-color: @surface;
+  background-image: none;
+  opacity: 1;
+  border: 1px solid alpha(@outline_variant, 0.64);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px alpha(@shadow, 0.38);
   padding: 12px;
 }
 
 .widget-title {
-  padding: 5px 7px 10px;
+  padding: 2px 2px 10px;
 }
 
 .widget-title > label {
   color: @on_surface;
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .widget-title > button,
 .widget-inhibitors > button {
-  background: @primary_container;
-  color: @on_primary_container;
-  border: none;
-  border-radius: 10px;
-  padding: 7px 12px;
+  background: @surface_container_high;
+  color: @on_surface;
+  border: 1px solid alpha(@outline_variant, 0.62);
+  border-radius: 9px;
+  padding: 5px 10px;
   box-shadow: none;
 }
 
@@ -55,16 +56,16 @@ blankwindow {
 
 .widget-dnd {
   background: @surface_container;
-  border: 1px solid @outline_variant;
-  border-radius: 12px;
-  margin: 4px 5px 9px;
-  padding: 9px 11px;
+  border: 1px solid alpha(@outline_variant, 0.58);
+  border-radius: 10px;
+  margin: 2px 0 7px;
+  padding: 7px 9px;
 }
 
 .widget-dnd > label {
   color: @on_surface;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .widget-dnd switch {
@@ -85,7 +86,7 @@ blankwindow {
 }
 
 .widget-mpris {
-  margin: 4px 5px 9px;
+  margin: 3px 3px 8px;
   padding: 0;
 }
 
@@ -134,10 +135,10 @@ blankwindow {
 .widget-volume,
 .widget-slider {
   background: @surface_container;
-  border: 1px solid @outline_variant;
-  border-radius: 12px;
-  margin: 4px 5px;
-  padding: 9px 11px;
+  border: 1px solid alpha(@outline_variant, 0.58);
+  border-radius: 10px;
+  margin: 3px 0;
+  padding: 7px 9px;
 }
 
 .widget-volume > box > label,
@@ -179,22 +180,44 @@ scale slider {
 
 .control-center-list {
   background: transparent;
-  margin-top: 5px;
+  margin-top: 8px;
 }
 
-.notification-row {
+.notification-group,
+.notification-group:focus {
   background: transparent;
+  background-image: none;
+  border: none;
+  box-shadow: none;
   outline: none;
 }
 
+.notification-row,
+.notification-row:focus {
+  background: transparent;
+  background-image: none;
+  outline: none;
+  box-shadow: none;
+  border-radius: 16px;
+}
+
 .notification-row .notification-background {
-  padding: 4px 5px;
+  background: transparent;
+  background-image: none;
+  padding: 3px 0;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+.control-center .control-center-list .notification {
+  box-shadow: none;
 }
 
 .notification-row .notification-background .notification {
-  background: alpha(@surface_container_high, 0.98);
-  border: 1px solid @outline_variant;
-  border-radius: 13px;
+  background: @surface_container;
+  background-image: none;
+  border: 1px solid alpha(@outline_variant, 0.56);
+  border-radius: 16px;
   box-shadow: none;
 }
 
@@ -202,9 +225,17 @@ scale slider {
   border-color: @error;
 }
 
-.notification-row .notification-background .notification .notification-default-action {
-  border-radius: 13px;
-  padding: 5px;
+.notification-row .notification-background .notification .notification-default-action,
+.notification-row .notification-background .notification .notification-default-action:not(:only-child) {
+  background-image: none;
+  border-radius: 15px;
+  padding: 7px;
+}
+
+.notification-row .notification-background .notification .notification-default-action .notification-content {
+  background-image: none;
+  border-radius: 15px;
+  padding: 0;
 }
 
 .notification-row .notification-background .notification .notification-default-action:hover,
@@ -215,22 +246,24 @@ scale slider {
 
 .notification-content .summary {
   color: @on_surface;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .notification-content .time,
 .notification-content .body {
   color: @on_surface_variant;
+  font-size: 12px;
 }
 
 .close-button {
-  background: @error_container;
-  color: @on_error_container;
+  background: transparent;
+  color: @on_surface_variant;
   border: none;
   border-radius: 99px;
-  margin: 7px;
-  min-width: 22px;
-  min-height: 22px;
+  margin: 5px;
+  min-width: 20px;
+  min-height: 20px;
   box-shadow: none;
 }
 
@@ -239,10 +272,17 @@ scale slider {
   color: @on_error;
 }
 
-.notification-action {
+.notification-alt-actions {
+  background-image: none;
+  border-radius: 0 0 15px 15px;
+}
+
+.notification-action,
+.notification-action > button {
   background: @secondary_container;
+  background-image: none;
   color: @on_secondary_container;
-  border-radius: 9px;
+  border-radius: 12px;
   margin: 4px;
   padding: 6px;
 }

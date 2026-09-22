@@ -20,15 +20,15 @@
   "timeout": 8,
   "timeout-low": 4,
   "timeout-critical": 0,
-  "fit-to-screen": false,
+  "fit-to-screen": true,
   "relative-timestamps": true,
-  "control-center-width": 430,
-  "control-center-height": 820,
-  "notification-window-width": 410,
+  "control-center-width": 360,
+  "control-center-height": 500,
+  "notification-window-width": 360,
   "keyboard-shortcuts": true,
-  "notification-grouping": true,
+  "notification-grouping": false,
   "image-visibility": "when-available",
-  "transition-time": 100,
+  "transition-time": 160,
   "hide-on-clear": false,
   "hide-on-action": true,
   "text-empty": "All caught up",
@@ -38,7 +38,6 @@
     "dnd",
     "mpris",
     "volume",
-    "buttons-grid",
     "slider",
     "notifications"
   ],
@@ -68,19 +67,6 @@
       "collapse-button-label": "",
       "animation-type": "slide_down",
       "animation-duration": 180
-    },
-    "buttons-grid": {
-      "buttons-per-row": 2,
-      "actions": [
-        {
-          "label": "󰃞  Dim",
-          "command": "__HOME__/.local/bin/brightness-control down"
-        },
-        {
-          "label": "󰃠  Bright",
-          "command": "__HOME__/.local/bin/brightness-control up"
-        }
-      ]
     },
     "slider": {
       "label": "󰃠",

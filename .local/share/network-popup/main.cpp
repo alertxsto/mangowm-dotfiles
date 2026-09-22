@@ -1,13 +1,34 @@
-#include <QGuiApplication>
+#include <algorithm>
+#include <QDir>
 #include <QFile>
+#include <QGuiApplication>
+#include <QLocalServer>
+#include <QLocalSocket>
+#include <QLockFile>
 #include <QProcess>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QScreen>
 #include <QRegularExpression>
+#include <QScreen>
 #include <QTextStream>
+#include <QThread>
 #include <QVariantList>
-#include <QDir>
+#include <unistd.h>
+
+namespace {
+QString socketName() {
+    return "network-popup-" + QString::number(getuid());
+}
+
+bool closeRunningPopup() {
+    QLocalSocket socket;
+    socket.connectToServer(socketName());
+    if (!socket.waitForConnected(80))
+        return false;
+    socket.write("close");
+    return socket.waitForBytesWritten(80);
+}
+}
 
 QVariantMap loadPalette(const QString &path) {
     QVariantMap palette{
@@ -130,6 +151,39 @@ private:
 int main(int argc, char **argv) {
     QGuiApplication app(argc, argv);
     QGuiApplication::setDesktopFileName("network-popup");
+
+    if (closeRunningPopup())
+        return 0;
+
+    QLockFile lock(QDir::tempPath() + "/" + socketName() + ".lock");
+    lock.setStaleLockTime(0);
+    if (!lock.tryLock()) {
+        for (int attempt = 0; attempt < 10; ++attempt) {
+            QThread::msleep(25);
+            if (closeRunningPopup())
+                return 0;
+        }
+        return 1;
+    }
+
+    QLocalServer::removeServer(socketName());
+    QLocalServer server;
+    if (!server.listen(socketName()))
+        return 1;
+    QObject::connect(&server, &QLocalServer::newConnection, &app, [&] {
+        while (QLocalSocket *socket = server.nextPendingConnection()) {
+            const auto handleMessage = [socket] {
+                if (socket->readAll().contains("close"))
+                    QCoreApplication::quit();
+                socket->disconnectFromServer();
+            };
+            QObject::connect(socket, &QLocalSocket::readyRead, socket, handleMessage);
+            QObject::connect(socket, &QLocalSocket::disconnected, socket, &QObject::deleteLater);
+            if (socket->bytesAvailable())
+                handleMessage();
+        }
+    });
+
     NetworkController controller;
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("networkController", &controller);

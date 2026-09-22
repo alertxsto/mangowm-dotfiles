@@ -138,6 +138,8 @@ int main(int argc, char *argv[]) {
 
         const QString relative = pictureDir.relativeFilePath(path);
         const QStringList parts = relative.split('/', Qt::SkipEmptyParts);
+        if (parts.size() >= 2 && parts.first() != "Wallpapers")
+            continue;
         QString category = "Personal";
         QString detail = "Local collection";
         if (parts.size() >= 3 && parts.first() == "Wallpapers") {
@@ -148,7 +150,15 @@ int main(int argc, char *argv[]) {
             detail = "Collection";
         }
 
-        scanned.push_back({path, displayName(QFileInfo(path).completeBaseName()), category, detail});
+        QImageReader metadata(path);
+        if (!metadata.canRead())
+            continue;
+        scanned.push_back({
+            path,
+            displayName(QFileInfo(path).completeBaseName()),
+            category,
+            detail
+        });
     }
 
     std::sort(scanned.begin(), scanned.end(), [](const Entry &a, const Entry &b) {
@@ -170,6 +180,7 @@ int main(int argc, char *argv[]) {
         const auto &entry = scanned.at(index);
         QVariantMap value{
             {"path", entry.path},
+            {"imageUrl", QUrl::fromLocalFile(entry.path)},
             {"thumbnailUrl", QUrl::fromLocalFile(thumbnailFor(entry.path, thumbnailDir))},
             {"name", entry.name},
             {"category", entry.category},

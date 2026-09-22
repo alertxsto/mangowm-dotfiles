@@ -1,0 +1,195 @@
+#!/usr/bin/env python3
+"""Render every color consumer from one named Mango palette."""
+
+from __future__ import annotations
+
+import os
+import re
+import sys
+import tempfile
+from pathlib import Path
+
+HOME = Path.home()
+CONFIG = HOME / ".config/mango/themes.conf"
+STATE = Path(os.environ.get("XDG_CACHE_HOME", HOME / ".cache")) / "mango-theme"
+HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+REQUIRED = {
+    "background", "surface", "surface_container", "surface_high", "foreground", "muted",
+    "outline", "border", "accent", "accent_fg", "selection", "selection_fg", "red",
+    "green", "yellow", "blue", "magenta", "cyan", "orange", "bright_red",
+    "bright_green", "bright_yellow", "bright_blue", "bright_magenta", "bright_cyan",
+    "bright_foreground",
+}
+
+
+def atomic_write(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False) as handle:
+        handle.write(text)
+        temporary = Path(handle.name)
+    temporary.replace(path)
+
+def contrast(first: str, second: str) -> float:
+    def luminance(value: str) -> float:
+        channels = (int(value[index:index + 2], 16) / 255 for index in (1, 3, 5))
+        linear = (channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4 for channel in channels)
+        red, green, blue = linear
+        return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+
+    lighter, darker = sorted((luminance(first), luminance(second)), reverse=True)
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+def validate_contrast(palette: dict[str, str], theme: str, variant: str) -> None:
+    pairs = {
+        "foreground/background": ("foreground", "background"),
+        "muted/background": ("muted", "background"),
+        "accent text/accent": ("accent_fg", "accent"),
+        "selection text/selection": ("selection_fg", "selection"),
+    }
+    failures = [
+        f"{name}={contrast(palette[foreground], palette[background]):.2f}"
+        for name, (foreground, background) in pairs.items()
+        if contrast(palette[foreground], palette[background]) < 4.5
+    ]
+    if failures:
+        raise SystemExit(f"Unsafe text contrast in {theme}/{variant}: {', '.join(failures)}")
+
+def load(theme: str, variant: str) -> dict[str, str]:
+    target = f"[{theme}.{variant}]"
+    active = False
+    palette: dict[str, str] = {}
+    for raw_line in CONFIG.read_text().splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            if active:
+                break
+            active = line == target
+            continue
+        if active:
+            for assignment in line.split(";"):
+                key, separator, value = assignment.strip().partition("=")
+                if not separator:
+                    raise SystemExit(f"Invalid palette assignment: {assignment}")
+                palette[key.strip()] = value.strip().strip("\"'")
+    if not palette:
+        raise SystemExit(f"Unknown named theme: {theme}/{variant}")
+    missing = REQUIRED - palette.keys()
+    invalid = {key for key in REQUIRED if key in palette and not HEX.fullmatch(palette[key])}
+    if missing or invalid:
+        raise SystemExit(f"Invalid palette {theme}/{variant}; missing={sorted(missing)}, invalid={sorted(invalid)}")
+    palette = {key: value.lower() for key, value in palette.items()}
+    validate_contrast(palette, theme, variant)
+    return palette
+
+
+def rofi(c: dict[str, str], theme: str, variant: str) -> str:
+    roles = {
+        "primary": c["accent"], "on-primary": c["accent_fg"],
+        "primary-container": c["selection"], "on-primary-container": c["selection_fg"],
+        "secondary": c["magenta"], "on-secondary": c["background"],
+        "tertiary": c["cyan"], "error": c["red"], "surface": c["background"],
+        "surface-container": c["surface_container"], "surface-container-high": c["surface_high"],
+        "on-surface": c["foreground"], "on-surface-variant": c["muted"],
+        "outline": c["outline"], "outline-variant": c["border"],
+        "theme-surface": c["surface"],
+        "red": c["red"], "green": c["green"], "yellow": c["yellow"], "blue": c["blue"],
+        "magenta": c["magenta"], "cyan": c["cyan"], "orange": c["orange"],
+        "bright-red": c["bright_red"], "bright-green": c["bright_green"],
+        "bright-yellow": c["bright_yellow"], "bright-blue": c["bright_blue"],
+        "bright-magenta": c["bright_magenta"], "bright-cyan": c["bright_cyan"],
+        "bright-foreground": c["bright_foreground"],
+    }
+    body = "\n".join(f"    {key}: {value};" for key, value in roles.items())
+    return f"/* Generated from named theme {theme}/{variant}. */\n* {{\n{body}\n}}\n"
+
+
+def material_css(c: dict[str, str], theme: str, variant: str) -> str:
+    roles = {
+        "background": c["background"], "error": c["red"], "error_container": c["bright_red"],
+        "inverse_on_surface": c["surface"], "inverse_primary": c["accent"],
+        "inverse_surface": c["foreground"], "on_background": c["foreground"],
+        "on_error": c["background"], "on_error_container": c["bright_foreground"],
+        "on_primary": c["accent_fg"], "on_primary_container": c["selection_fg"],
+        "on_primary_fixed": c["accent_fg"], "on_primary_fixed_variant": c["foreground"],
+        "on_secondary": c["background"], "on_secondary_container": c["selection_fg"],
+        "on_secondary_fixed": c["background"], "on_secondary_fixed_variant": c["muted"],
+        "on_surface": c["foreground"], "on_surface_variant": c["muted"],
+        "on_tertiary": c["background"], "on_tertiary_container": c["selection_fg"],
+        "on_tertiary_fixed": c["background"], "on_tertiary_fixed_variant": c["muted"],
+        "outline": c["outline"], "outline_variant": c["border"], "primary": c["accent"],
+        "primary_container": c["selection"], "primary_fixed": c["bright_blue"],
+        "primary_fixed_dim": c["accent"], "scrim": "#000000", "secondary": c["magenta"],
+        "secondary_container": c["surface_high"], "secondary_fixed": c["bright_magenta"],
+        "secondary_fixed_dim": c["magenta"], "shadow": "#000000", "source_color": c["accent"],
+        "surface": c["background"], "surface_bright": c["surface_high"],
+        "surface_container": c["surface_container"], "surface_container_high": c["surface_high"],
+        "surface_container_highest": c["outline"], "surface_container_low": c["surface"],
+        "surface_container_lowest": c["surface"], "surface_dim": c["background"],
+        "surface_tint": c["accent"], "surface_variant": c["border"], "tertiary": c["cyan"],
+        "tertiary_container": c["surface_high"], "tertiary_fixed": c["bright_cyan"],
+        "tertiary_fixed_dim": c["cyan"],
+        "red": c["red"], "green": c["green"], "yellow": c["yellow"],
+        "blue": c["blue"], "magenta": c["magenta"], "cyan": c["cyan"],
+        "orange": c["orange"], "bright_red": c["bright_red"],
+        "bright_green": c["bright_green"], "bright_yellow": c["bright_yellow"],
+        "bright_blue": c["bright_blue"], "bright_magenta": c["bright_magenta"],
+        "bright_cyan": c["bright_cyan"],
+    }
+    lines = [f"/* Generated from named theme {theme}/{variant}. */"]
+    lines.extend(f"@define-color {key} {value};" for key, value in roles.items())
+    return "\n".join(lines) + "\n"
+
+
+def kitty(c: dict[str, str], theme: str, variant: str) -> str:
+    values = [c["background"], c["red"], c["green"], c["yellow"], c["blue"], c["magenta"], c["cyan"], c["foreground"], c["border"], c["bright_red"], c["bright_green"], c["bright_yellow"], c["bright_blue"], c["bright_magenta"], c["bright_cyan"], c["bright_foreground"]]
+    lines = [f"# Generated from named theme {theme}/{variant}.", f"background {c['background']}", f"foreground {c['foreground']}", f"cursor {c['bright_foreground']}", f"cursor_text_color {c['background']}", f"selection_background {c['selection']}", f"selection_foreground {c['selection_fg']}", f"url_color {c['cyan']}", f"active_border_color {c['accent']}", f"inactive_border_color {c['border']}", f"active_tab_background {c['accent']}", f"active_tab_foreground {c['accent_fg']}", f"inactive_tab_background {c['surface_container']}", f"inactive_tab_foreground {c['foreground']}"]
+    lines.extend(f"color{index} {value}" for index, value in enumerate(values))
+    return "\n".join(lines) + "\n"
+
+
+def mango(c: dict[str, str], theme: str, variant: str) -> str:
+    def rgba(value: str, alpha: str = "ff") -> str:
+        return f"0x{value[1:]}{alpha}"
+    return "\n".join((f"# Generated from named theme {theme}/{variant}.", f"rootcolor={rgba(c['background'])}", f"bordercolor={rgba(c['border'])}", f"dropcolor={rgba(c['accent'], '66')}", f"splitcolor={rgba(c['cyan'])}", f"focuscolor={rgba(c['accent'])}", f"maximizescreencolor={rgba(c['red'])}", f"urgentcolor={rgba(c['red'])}", f"scratchpadcolor={rgba(c['magenta'])}", f"globalcolor={rgba(c['yellow'])}", f"overlaycolor={rgba(c['surface_high'])}")) + "\n"
+
+
+def btop(c: dict[str, str], theme: str, variant: str) -> str:
+    role = lambda name, key: f'theme[{name}]="{c[key]}"'
+    pairs = [("main_bg", "background"), ("main_fg", "foreground"), ("title", "foreground"), ("hi_fg", "accent"), ("selected_bg", "selection"), ("selected_fg", "selection_fg"), ("inactive_fg", "muted"), ("graph_text", "foreground"), ("meter_bg", "surface_high"), ("proc_misc", "cyan"), ("cpu_box", "magenta"), ("mem_box", "green"), ("net_box", "red"), ("proc_box", "accent"), ("div_line", "border")]
+    gradients = {"temp": ("green", "yellow", "red"), "cpu": ("cyan", "blue", "magenta"), "free": ("magenta", "blue", "cyan"), "cached": ("blue", "cyan", "magenta"), "available": ("yellow", "orange", "red"), "used": ("green", "cyan", "blue"), "download": ("yellow", "orange", "red"), "upload": ("green", "cyan", "blue"), "process": ("cyan", "blue", "magenta")}
+    lines = [f"# Generated from named theme {theme}/{variant}."] + [role(name, key) for name, key in pairs]
+    for name, keys in gradients.items():
+        lines.extend(role(f"{name}_{point}", key) for point, key in zip(("start", "mid", "end"), keys))
+    for index, key in enumerate(("background", "surface", "surface_container", "surface_high", "border", "outline", "muted", "foreground")):
+        lines.append(role(f"gradient_color_{index}", key))
+    return "\n".join(lines) + "\n"
+
+
+def nvim(c: dict[str, str], theme: str, variant: str) -> str:
+    rows = "\n".join(f'  ["{key}"] = "{value}",' for key, value in c.items())
+    return f'-- Generated from named theme {theme}/{variant}.\nreturn {{\n  ["mode"] = "{variant}",\n{rows}\n}}\n'
+
+
+def main() -> None:
+    if len(sys.argv) != 3:
+        raise SystemExit("Usage: apply-named-theme THEME VARIANT")
+    theme, variant = (value.lower() for value in sys.argv[1:])
+    c = load(theme, variant)
+    css = material_css(c, theme, variant)
+    atomic_write(HOME / ".config/rofi/colors.rasi", rofi(c, theme, variant))
+    atomic_write(HOME / ".config/waybar/colors.css", css)
+    atomic_write(HOME / ".config/swaync/colors.css", css)
+    atomic_write(HOME / ".config/mango/colors.conf", mango(c, theme, variant))
+    atomic_write(HOME / ".config/kitty/colors.conf", kitty(c, theme, variant))
+    atomic_write(HOME / ".config/btop/themes/mango.theme", btop(c, theme, variant))
+    atomic_write(HOME / ".config/nvim/lua/mango/palette.lua", nvim(c, theme, variant))
+    STATE.mkdir(parents=True, exist_ok=True)
+    atomic_write(STATE / "theme", theme + "\n")
+    atomic_write(STATE / "mode", variant + "\n")
+
+
+if __name__ == "__main__":
+    main()

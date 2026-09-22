@@ -1,18 +1,33 @@
-/* Generated from the active wallpaper by Matugen. */
+/* Generated from named theme gruvbox/light. */
 * {
-    primary: #ffb0d0;
-    on-primary: #4c1833;
-    primary-container: #864764;
-    on-primary-container: #ffffff;
-    secondary: #e1bdca;
-    on-secondary: #3b252e;
-    tertiary: #f1bb98;
-    error: #ffb4ab;
-    surface: #191114;
-    surface-container: #282023;
-    surface-container-high: #332a2d;
-    on-surface: #eedfe2;
-    on-surface-variant: #d4c2c7;
-    outline: #9d8c92;
-    outline-variant: #66585d;
+    primary: #b57614;
+    on-primary: #000000;
+    primary-container: #d5c4a1;
+    on-primary-container: #282828;
+    secondary: #8f3f71;
+    on-secondary: #fbf1c7;
+    tertiary: #427b58;
+    error: #cc241d;
+    surface: #fbf1c7;
+    surface-container: #ebdbb2;
+    surface-container-high: #d5c4a1;
+    on-surface: #3c3836;
+    on-surface-variant: #665c54;
+    outline: #928374;
+    outline-variant: #bdae93;
+    theme-surface: #f2e5bc;
+    red: #cc241d;
+    green: #79740e;
+    yellow: #b57614;
+    blue: #076678;
+    magenta: #8f3f71;
+    cyan: #427b58;
+    orange: #af3a03;
+    bright-red: #9d0006;
+    bright-green: #79740e;
+    bright-yellow: #b57614;
+    bright-blue: #076678;
+    bright-magenta: #8f3f71;
+    bright-cyan: #427b58;
+    bright-foreground: #282828;
 }

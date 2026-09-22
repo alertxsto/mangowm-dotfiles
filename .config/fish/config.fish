@@ -30,8 +30,10 @@ if status is-interactive
     alias lt 'eza --tree --level=2 --icons=auto --group-directories-first'
     alias cat 'bat --paging=never'
     alias grep 'grep --color=auto'
-    # Keep OMP in $HOME instead of its default temporary workspace.
-    alias omp 'command omp --allow-home'
+
+    function omp --description 'Launch OMP in the current directory'
+        command $HOME/.local/bin/omp --allow-home --cwd "$PWD" $argv
+    end
 
     abbr -a g git
     abbr -a ga 'git add'

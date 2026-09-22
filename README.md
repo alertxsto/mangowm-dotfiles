@@ -4,11 +4,11 @@
 
 **A cohesive, wallpaper-driven Wayland desktop for Artix Linux.**
 
-[![Artix Linux](https://img.shields.io/badge/Artix_Linux-1793D1?style=for-the-badge&logo=archlinux&logoColor=white)](https://artixlinux.org/) [![Wayland](https://img.shields.io/badge/Wayland-111111?style=for-the-badge&logo=wayland&logoColor=white)](https://wayland.freedesktop.org/) [![MangoWM](https://img.shields.io/badge/MangoWM-Dynamic-8FA4B8?style=for-the-badge)](https://github.com/mangowm/mango) [![Matugen](https://img.shields.io/badge/Matugen-Material_You-CFA6A6?style=for-the-badge)](https://github.com/InioX/matugen)
+[![Artix Linux](https://img.shields.io/badge/Artix_Linux-1793D1?style=for-the-badge&logo=archlinux&logoColor=white)](https://artixlinux.org/) [![Wayland](https://img.shields.io/badge/Wayland-111111?style=for-the-badge&logo=wayland&logoColor=white)](https://wayland.freedesktop.org/) [![MangoWM](https://img.shields.io/badge/MangoWM-Themed-8FA4B8?style=for-the-badge)](https://github.com/mangowm/mango)
 
 <img src="assets/desktop.webp" alt="MangoWM desktop with Waybar, Kitty, and Fastfetch" width="100%">
 
-<sub>MangoWM · Waybar · SwayNC · Rofi · Kitty · Matugen · OpenRC</sub>
+<sub>MangoWM · Waybar · SwayNC · Rofi · Kitty · btop · LazyVim · OpenRC</sub>
 
 <br><br>
 
@@ -21,7 +21,7 @@
 <table>
   <tr>
     <td width="50%">
-      <img src="assets/wallpaper-picker.webp" alt="Full-screen wallpaper picker">
+      <img src="assets/wallpaper-picker.webp" alt="Floating wallpaper picker">
       <br>
       <sub><b>Wallpaper gallery</b> — search, browse, preview, and recolor the complete desktop.</sub>
     </td>
@@ -47,15 +47,17 @@ This repository is an audited snapshot of the active desktop—not a loose colle
 | Bar / notifications | Waybar / SwayNC |
 | Launcher / terminal | Rofi / Kitty |
 | Shell / prompt | Fish / Starship |
-| Wallpaper / colors | Custom Qt gallery / Matugen SchemeSmart |
+| Wallpaper / colors | Custom Qt gallery / curated named palettes |
 | Audio / network | PipeWire + WirePlumber / NetworkManager |
 | Desktop integration | Dolphin + KDE colors + GTK3/GTK4 CSS |
 
 ## Highlights
 
-- **One-command recoloring.** Matugen propagates the wallpaper palette through MangoWM, Waybar, SwayNC, Rofi, Kitty, Fish, Starship, Fastfetch, KDE, GTK, and Breeze folder icons.
-- **Purpose-built desktop tools.** Native Qt wallpaper gallery, NetworkManager Wi-Fi popup, and volume/brightness OSD.
+- **One-command recoloring.** Named wallpaper folders apply curated palettes to MangoWM, Waybar, SwayNC, Rofi, Kitty, btop, LazyVim, Fish, Starship, Fastfetch, KDE, GTK, and Breeze folder icons; ungrouped wallpapers use Material Dark.
+- **Consistent terminal workflow.** Rofi, btop, and Neovim open through Kitty; Neovim owns text and source-code MIME types.
+- **Purpose-built desktop tools.** Native Qt wallpaper gallery, matching Wi-Fi and Bluetooth popups, and a volume/brightness OSD.
 - **Responsive workflow.** Nine tags, directional navigation, touchpad gestures, blur, animations, scratchpads, and a compact status bar.
+- **Selectable Waybar layouts.** Switch between a full-width bar and floating dock from the status module; the choice survives installer refreshes.
 - **Event-driven status.** Custom Mango tag indicators update from compositor IPC instead of polling through `jq`.
 - **Audited deployment.** The installer adapts hardware names, builds local tools from source, configures OpenRC services, and backs up every conflict.
 - **Repeatable installation.** Identical files and matching symlinks are left untouched, making subsequent installs idempotent.
@@ -118,9 +120,10 @@ When `--target-home` differs from `$HOME`, use `--skip-services`; user OpenRC se
 3. Installs repository and AUR dependencies listed in [`packages.txt`](packages.txt).
 4. Copies the tracked home tree into the selected target home.
 5. Replaces `__HOME__` placeholders with the actual target path.
-6. Detects the Wi-Fi interface and backlight device.
-7. Builds `network-popup`, `mango-osd`, and `wallpaper-overview` from source.
-8. Enables required system and user OpenRC services.
+6. Registers Kitty and Neovim as desktop defaults and restores the selected Waybar layout.
+7. Detects the Wi-Fi interface and backlight device.
+8. Builds the Wi-Fi, Bluetooth, OSD, and wallpaper utilities from source.
+9. Enables required system and user OpenRC services.
 
 ### Existing-file safety
 
@@ -138,23 +141,27 @@ Identical files and matching symlinks are left in place. Re-running the installe
 .
 ├── .config/
 │   ├── mango/                 # compositor, rules, bindings, startup
-│   ├── waybar/                # bar modules and styling
+│   ├── waybar/                # switchable bar/dock modules and styling
 │   ├── swaync/                # notifications and control center
 │   ├── rofi/                  # launcher
 │   ├── kitty/                 # terminal
-│   ├── matugen/               # color generator and templates
+│   ├── btop/                  # generated activity monitor theme
+│   ├── nvim/                  # LazyVim setup and generated Mango palette
 │   ├── fish/                  # shell startup and generated colors
 │   ├── fastfetch/             # generated layout and image
 │   ├── gtk-3.0/               # GTK3 palette integration
 │   ├── gtk-4.0/               # GTK4/libadwaita integration
 │   ├── fontconfig/            # icon-font fallback aliases
-│   └── xsettingsd/            # GTK/XSettings bridge
+│   ├── xsettingsd/            # GTK/XSettings bridge
+│   └── xdg-desktop-portal/    # Wayland screen-capture routing
 ├── .local/
 │   ├── bin/                   # shell and Python helpers
 │   └── share/
 │       ├── network-popup/     # Qt Wi-Fi popup source
+│       ├── bluetooth-popup/   # Qt Bluetooth popup source
 │       ├── mango-osd/         # Qt OSD source
-│       ├── wallpaper-overview/# Qt wallpaper gallery source
+│       ├── wallpaper-overview/ # Qt wallpaper gallery source
+│       ├── applications/      # terminal-first desktop launchers
 │       └── color-schemes/     # KDE fallback color scheme
 ├── AUDIT.md                   # system audit and exclusions
 ├── packages.txt               # repository, AUR, and OpenRC packages
@@ -165,16 +172,11 @@ Identical files and matching symlinks are left in place. Re-running the installe
 
 ```mermaid
 flowchart LR
-    W[Wallpaper] --> M[Matugen]
-    M --> A[MangoWM]
-    M --> B[Waybar]
-    M --> C[SwayNC]
-    M --> D[Rofi]
-    M --> E[Kitty]
-    M --> S[sync-desktop-colors]
-    S --> K[KDE / Dolphin]
-    S --> G[GTK3 / GTK4]
-    S --> I[Dynamic Breeze folders]
+    W[Wallpaper path] --> P[Theme and light/dark variant]
+    P --> A[MangoWM / Waybar / SwayNC / Rofi]
+    P --> T[Kitty / btop / LazyVim]
+    A --> S[sync-desktop-colors]
+    S --> K[KDE / Dolphin / GTK]
     S --> F[Fish / Starship / Fastfetch]
 ```
 
@@ -184,6 +186,11 @@ The main entry point is:
 theme-wallpaper /path/to/wallpaper.png
 ```
 
+Wallpapers under `~/Pictures/Wallpapers/<Theme>/<Dark|Light>/` select the
+matching curated palette. Supported families are Catppuccin, Dracula,
+Everforest, Gruvbox, Material, Nord, Osaka, and Rose Pine. Images outside that
+layout use Material Dark instead of deriving unstable colors from image pixels.
+
 Without an argument, it uses this precedence:
 
 1. The last selected wallpaper from `~/.cache/mango-theme/wallpaper`.
@@ -191,20 +198,66 @@ Without an argument, it uses this precedence:
 3. The first supported image under `~/Pictures`.
 4. The tracked fallback palette when no image exists.
 
-The theme command reloads MangoWM, Waybar, Kitty, and SwayNC after regenerating colors.
+The theme command reloads MangoWM, Waybar, Kitty, btop, and SwayNC after regenerating colors. Running LazyVim instances watch the generated palette and recolor immediately; Fish reloads its generated colors at the next prompt.
+
+### Cursor theme
+
+The cursor is declared once, in `~/.config/mango/config.conf`:
+
+```conf
+cursor_theme=Bibata-Modern-Classic
+cursor_size=24
+```
+
+Mango derives `XCURSOR_THEME`/`XCURSOR_SIZE` from those keys for its own pointer
+and for every child process. Other toolkits keep private copies, so
+`sync-cursor` mirrors the two values into all of them and notifies running
+applications:
+
+| Consumer | Store |
+|---|---|
+| Waybar and other GTK3/GTK4 apps on Wayland | `dconf` `org.gnome.desktop.interface cursor-theme`, served through the settings portal |
+| GTK3/GTK4 on X11 and portal-less sessions | `settings.ini` keys |
+| GTK2 | `~/.gtkrc-2.0` |
+| Qt via the KDE platform theme | `kcminputrc` `[Mouse]` |
+| XSettings consumers | `xsettingsd.conf` |
+| The theme named `default` | `~/.icons/default/index.theme` |
+
+`sync-cursor` runs at session start and is idempotent. After editing the two
+Mango keys, apply them everywhere with:
+
+```bash
+sync-cursor
+```
+
+Editing only `settings.ini` is not enough: on Wayland, GTK resolves the cursor
+through the settings portal, whose value comes from dconf.
+
+### Waybar layouts
+
+Waybar ships with a full-width `bar` profile and an inset `dock` profile. The
+`Bar`/`Dock` status module runs `~/.config/waybar/mode.sh toggle`, replaces the
+active config and stylesheet, restarts Waybar, and records the choice in
+`~/.config/waybar/.mode`. `install.sh` reapplies that profile after refreshing
+the tracked files.
 
 ## Custom utilities
 
-### `network-popup`
+### Connectivity popups
 
-Qt Quick Wi-Fi frontend backed by `nmcli`.
+`network-popup` is a Qt Quick Wi-Fi frontend backed by `nmcli`.
 
 - Scans and sorts access points by connection state and signal strength.
 - Connects to open or secured networks.
 - Opens `nmtui` for advanced configuration.
-- Closes when focus leaves the popup.
 
-Launch it from the Waybar network module.
+`bluetooth-popup` is a matching frontend backed by `bluetoothctl`.
+
+- Powers Bluetooth on or off and scans for nearby devices.
+- Pairs, trusts, connects, disconnects, and forgets devices.
+
+Launch either popup from its Waybar module. Clicking the same module again, pressing
+Escape, or moving focus away closes it.
 
 ### `mango-osd`
 
@@ -220,9 +273,10 @@ The server starts with MangoWM. `volume-control` and `brightness-control` send u
 
 ### `wallpaper-overview`
 
-Full-screen Qt Quick wallpaper browser.
+Floating Qt Quick wallpaper browser with animated keyboard and pointer navigation.
 
-- Recursively scans the XDG Pictures directory.
+- Scans `Pictures/Wallpapers` recursively plus images directly under `Pictures`; screenshot and application-output folders stay excluded.
+- Uses one stable selected frame; every wallpaper is cropped inside it so image pixels never cross the border.
 - Groups images by folder.
 - Supports category navigation and text filtering.
 - Generates cached 16:9 previews.
@@ -239,6 +293,7 @@ Full-screen Qt Quick wallpaper browser.
 | `Super+E` | Open Dolphin |
 | `Super+W` | Open wallpaper gallery |
 | `Super+R` | Regenerate colors from the current wallpaper |
+| `Print` | Select and capture a screen region; save and copy it |
 | `Super+Q` | Close focused client |
 | `Super+M` | Exit MangoWM |
 
@@ -310,7 +365,7 @@ git pull --ff-only
 
 Changed local destinations are backed up before replacement.
 
-To regenerate the desktop after editing a Matugen template:
+To regenerate the desktop after editing a named palette:
 
 ```bash
 theme-wallpaper
@@ -333,6 +388,38 @@ waybar --log-level debug
 ```
 
 The Mango config intentionally runs `theme-wallpaper` before `waybar`. Do not split them into concurrent startup commands; the theme helper reload signal can race Waybar startup.
+
+### Brave notifications appear as application windows
+
+SwayNC must own `org.freedesktop.Notifications` before Brave starts:
+
+```bash
+busctl --user status org.freedesktop.Notifications
+```
+
+The installer publishes the session bus address through `.pam_environment`, and
+the user Brave launcher supplies it immediately through `brave-session`. The
+wrapper discovers the installed Brave executable (`brave-beta`,
+`brave-browser-beta`, `brave-browser`, or `brave`), so the fix is not tied to
+one package path. Fully quit Brave and installed Brave web apps before
+reopening them. Sign out once after the first install so every Mango-launched
+application inherits the bus address directly.
+
+### OBS screen capture under Mango
+
+OBS needs PipeWire and the wlroots desktop-portal backend for Wayland capture.
+`packages.txt` installs `xdg-desktop-portal-wlr`, while
+`~/.config/xdg-desktop-portal/mango-portals.conf` routes only `ScreenCast`,
+`Screenshot`, and `RemoteDesktop` to `wlr`; GTK remains the default for other
+portal dialogs.
+
+After installing or changing the portal backend, log out and back in, then
+choose OBS's `Screen Capture (PipeWire)` source. Verify the backend services
+with:
+
+```bash
+ps -ef | grep -E 'xdg-desktop-portal($|-[a-z])' | grep -v grep
+```
 
 ### No wallpaper is applied
 

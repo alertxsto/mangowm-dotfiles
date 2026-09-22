@@ -2,9 +2,12 @@
 bash
 base-devel
 bat
+btop
 breeze
 breeze-icons
 brightnessctl
+bluez
+bluez-utils
 coreutils
 dbus
 dolphin
@@ -16,6 +19,7 @@ fish
 fzf
 gawk
 git
+grim
 grep
 kconfig
 kde-gtk-config
@@ -28,11 +32,11 @@ networkmanager
 noto-fonts
 noto-fonts-emoji
 ocean-sound-theme
-oxygen-cursors
 papirus-icon-theme
 pavucontrol
 pipewire
 pipewire-pulse
+playerctl
 plasma-integration
 plasma-workspace
 polkit
@@ -47,6 +51,7 @@ qt6-tools
 sudo
 rofi
 sddm
+slurp
 starship
 swaybg
 swaync
@@ -56,9 +61,11 @@ ttf-nerd-fonts-symbols
 ttf-roboto
 util-linux
 waybar
+wl-clipboard
 which
 wireplumber
 xdg-desktop-portal
+xdg-desktop-portal-wlr
 xdg-desktop-portal-gtk
 xdg-utils
 xorg-xwayland
@@ -66,8 +73,8 @@ xsettingsd
 
 # AUR packages
 brave-beta-bin
+bibata-cursor-theme-bin
 mangowm-git
-matugen-bin
 
 # Artix/OpenRC packages
 networkmanager-openrc
@@ -76,4 +83,5 @@ sddm-openrc
 dbus-openrc
 pipewire-openrc
 elogind-openrc
+bluez-openrc
 artix-dark-theme

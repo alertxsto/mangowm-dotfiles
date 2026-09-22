@@ -6,6 +6,10 @@ set -uo pipefail
 
 index="${1:-}"
 [[ "$index" =~ ^[1-9]$ ]] || exit 2
+icons=("" "" "" "" "" "" "" "" "")
+labels=("Browser" "Terminal" "Code" "Chat" "Files" "Music" "Video" "Games" "System")
+icon="${icons[index - 1]}"
+label="${labels[index - 1]}"
 cache="${XDG_RUNTIME_DIR:-/tmp}/mango-workspaces.json"
 
 if [[ -r "$cache" ]]; then
@@ -43,5 +47,5 @@ else
   detail="$count windows"
 fi
 
-printf '{"text":"%s","class":"%s","tooltip":"Workspace %s - %s"}\n' \
-  "$index" "$state" "$index" "$detail"
+printf '{"text":"%s","class":"%s","tooltip":"Workspace %s · %s · %s"}\n' \
+  "$icon" "$state" "$index" "$label" "$detail"

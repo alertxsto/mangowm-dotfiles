@@ -39,7 +39,7 @@ Window {
         else if (everActive && visible) closeTimer.restart()
     }
     Timer { id: activationTimer; interval: 180; onTriggered: root.requestActivate() }
-    Timer { id: closeTimer; interval: 80; onTriggered: if (!root.active) Qt.quit() }
+    Timer { id: closeTimer; interval: 300; onTriggered: if (!root.active) Qt.quit() }
 
     Shortcut { sequence: "Esc"; onActivated: Qt.quit() }
     Shortcut {

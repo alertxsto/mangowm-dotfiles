@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=btop++
+GenericName=System Monitor
+Comment=Monitor system resources in Kitty
+TryExec=kitty
+Exec=kitty --class btop --title btop -e btop
+Icon=btop
+Terminal=false
+Categories=System;Monitor;ConsoleOnly;
+Keywords=system;process;task;terminal;
+StartupNotify=true

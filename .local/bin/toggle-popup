@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -u
+
+if (($# != 1)); then
+  printf 'Usage: toggle-popup {network-popup|bluetooth-popup}\n' >&2
+  exit 2
+fi
+
+case "$1" in
+  network-popup|bluetooth-popup) popup="$1" ;;
+  *)
+    printf 'toggle-popup: unsupported popup: %s\n' "$1" >&2
+    exit 2
+    ;;
+esac
+
+binary="$HOME/.local/bin/$popup"
+[[ -x "$binary" ]] || {
+  printf 'toggle-popup: executable not found: %s\n' "$binary" >&2
+  exit 1
+}
+
+runtime_dir="${XDG_RUNTIME_DIR:-/tmp}"
+state_file="$runtime_dir/$popup-$UID.pid"
+lock_file="$runtime_dir/$popup-$UID.launcher.lock"
+exec 9>"$lock_file"
+flock -x 9
+
+pid=''
+if [[ -r "$state_file" ]]; then
+  IFS= read -r pid < "$state_file" || true
+fi
+if [[ "$pid" =~ ^[0-9]+$ && -e "/proc/$pid/exe" ]] \
+    && [[ "$(readlink -f -- "/proc/$pid/exe")" == "$(readlink -f -- "$binary")" ]]; then
+  kill "$pid"
+  rm -f -- "$state_file"
+  exit 0
+fi
+
+rm -f -- "$state_file"
+"$binary" &
+pid=$!
+printf '%s\n' "$pid" > "$state_file"
+flock -u 9
+
+wait "$pid"
+status=$?
+flock -x 9
+current=''
+if [[ -r "$state_file" ]]; then
+  IFS= read -r current < "$state_file" || true
+fi
+if [[ "$current" == "$pid" ]]; then
+  rm -f -- "$state_file"
+elif [[ -z "$current" ]]; then
+  status=0
+fi
+exit "$status"

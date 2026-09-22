@@ -1,6 +1,7 @@
 configuration {
     modi: "drun";
     show-icons: true;
+    terminal: "kitty";
     display-drun: "󰀻  Applications";
     drun-display-format: "{name}";
     font: "JetBrainsMono Nerd Font 11";

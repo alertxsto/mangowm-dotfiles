@@ -1,0 +1,14 @@
+# Qt must resolve its palette from the KDE colour scheme in kdeglobals, which
+# the wallpaper pipeline rewrites. /etc/environment pins gtk4, which has no Qt
+# platform-theme plugin (only libqgtk3.so ships), so Qt silently falls back to
+# a light Fusion palette. pam_env reads /etc/environment first and this file
+# last (user_readenv=1 in /etc/pam.d/system-login), so OVERRIDE wins.
+QT_QPA_PLATFORMTHEME DEFAULT=${QT_QPA_PLATFORMTHEME} OVERRIDE=kde
+TERMINAL DEFAULT=kitty OVERRIDE=kitty
+EDITOR DEFAULT=nvim OVERRIDE=nvim
+VISUAL DEFAULT=nvim OVERRIDE=nvim
+
+# Mango is started directly by the display manager on Artix. Publish the user
+# bus address so Chromium applications use the freedesktop notification daemon
+# instead of rendering fallback notification windows.
+DBUS_SESSION_BUS_ADDRESS DEFAULT=unix:path=${XDG_RUNTIME_DIR}/bus

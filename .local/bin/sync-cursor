@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+"""Propagate the Mango cursor theme to every toolkit that keeps its own copy.
+
+MangoWM owns the cursor definition (`cursor_theme`/`cursor_size` in
+`~/.config/mango/config.conf`) and exports `XCURSOR_THEME`/`XCURSOR_SIZE` to the
+session. Every other toolkit resolves cursors from its own store, so this helper
+mirrors those two values into all of them:
+
+- GTK3 and GTK4 on Wayland read the settings portal, which serves dconf's
+  `org.gnome.desktop.interface cursor-theme`/`cursor-size`; their `settings.ini`
+  keys are written as the fallback for X11 and portal-less sessions.
+- GTK2 reads `~/.gtkrc-2.0`.
+- Qt via the KDE platform theme reads `kcminputrc [Mouse]`.
+- XSettings consumers read `xsettingsd.conf`.
+- Anything asking for the theme named `default` reads
+  `~/.icons/default/index.theme`.
+
+Running toolkits are notified so the change applies without a relogin.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+HOME = Path.home()
+CONFIG = HOME / ".config/mango/config.conf"
+ICONS = Path("/usr/share/icons")
+DEFAULT_THEME = "Bibata-Modern-Classic"
+DEFAULT_SIZE = 24
+TOKEN = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+?)\s*$")
+
+
+def mango_setting(key: str, fallback: str) -> str:
+    """Reads one scalar key from the Mango config."""
+    if CONFIG.exists():
+        for line in CONFIG.read_text().splitlines():
+            match = TOKEN.match(line)
+            if match and match.group(1) == key:
+                return match.group(2)
+    return fallback
+
+
+def set_ini(path: Path, values: dict[str, str], section: str = "Settings") -> None:
+    """Rewrites the given keys of a settings.ini, creating them when absent."""
+    text = path.read_text() if path.exists() else f"[{section}]\n"
+    if f"[{section}]" not in text:
+        text = f"[{section}]\n" + text
+    for key, value in values.items():
+        pattern = re.compile(rf"^{re.escape(key)}\s*=.*$", re.MULTILINE)
+        line = f"{key}={value}"
+        text = pattern.sub(line, text) if pattern.search(text) else text.rstrip() + f"\n{line}\n"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+
+
+def set_quoted(path: Path, values: dict[str, str]) -> None:
+    """Rewrites `Key "value"` style lines, appending missing keys."""
+    text = path.read_text() if path.exists() else ""
+    for key, value in values.items():
+        pattern = re.compile(rf"^{re.escape(key)}\s+.*$", re.MULTILINE)
+        line = f'{key} "{value}"'
+        text = pattern.sub(line, text) if pattern.search(text) else text.rstrip() + f"\n{line}\n"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+
+
+def set_gtk2(path: Path, name: str, size: int) -> None:
+    """Rewrites the GTK2 rc file, where values may be quoted or bare."""
+    text = path.read_text() if path.exists() else ""
+    for key, value in (("gtk-cursor-theme-name", f'"{name}"'), ("gtk-cursor-theme-size", str(size))):
+        pattern = re.compile(rf"^\s*{re.escape(key)}\s*=.*$", re.MULTILINE)
+        line = f"{key}={value}"
+        text = pattern.sub(line, text) if pattern.search(text) else text.rstrip() + f"\n{line}\n"
+    path.write_text(text)
+
+
+def set_default_theme(name: str) -> None:
+    """Points the `default` cursor name at the active theme."""
+    directory = HOME / ".icons/default"
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "index.theme").write_text(
+        "[Icon Theme]\n"
+        "Name=Default\n"
+        "Comment=Default Cursor Theme\n"
+        f"Inherits={name}\n"
+    )
+
+
+def notify(name: str, size: int) -> None:
+    """Tells running toolkits to reload their cursor."""
+    if shutil.which("gsettings"):
+        for key, value in (("cursor-theme", name), ("cursor-size", str(size))):
+            subprocess.run(
+                ["gsettings", "set", "org.gnome.desktop.interface", key, value],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+    # KDE applications rebuild their cursor from kcminputrc on this signal.
+    if shutil.which("qdbus6"):
+        subprocess.run(
+            ["qdbus6", "org.kde.KGlobalSettings", "/KGlobalSettings", "notifyChange", "5", "0"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    if shutil.which("pkill"):
+        subprocess.run(["pkill", "-HUP", "-x", "xsettingsd"], check=False)
+
+
+def main() -> int:
+    name = mango_setting("cursor_theme", DEFAULT_THEME)
+    size = int(mango_setting("cursor_size", str(DEFAULT_SIZE)))
+
+    if not (ICONS / name / "cursors").is_dir():
+        print(f"sync-cursor: {name} is not installed under {ICONS}", file=sys.stderr)
+        return 1
+
+    set_ini(HOME / ".config/gtk-3.0/settings.ini",
+            {"gtk-cursor-theme-name": name, "gtk-cursor-theme-size": str(size)})
+    set_ini(HOME / ".config/gtk-4.0/settings.ini",
+            {"gtk-cursor-theme-name": name, "gtk-cursor-theme-size": str(size)})
+    set_quoted(HOME / ".config/xsettingsd/xsettingsd.conf",
+               {"Gtk/CursorThemeName": name, "Gtk/CursorThemeSize": str(size)})
+    set_ini(HOME / ".config/kcminputrc",
+            {"cursorTheme": name, "cursorSize": str(size)}, section="Mouse")
+    set_gtk2(HOME / ".gtkrc-2.0", name, size)
+    set_default_theme(name)
+    notify(name, size)
+
+    print(name)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        print(f"sync-cursor: {error}", file=sys.stderr)
+        raise SystemExit(1)

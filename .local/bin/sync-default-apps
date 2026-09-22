@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+applications_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+if command -v update-desktop-database >/dev/null 2>&1; then
+  update-desktop-database "$applications_dir"
+fi
+
+
+mime_types=(
+  text/plain text/english text/markdown text/x-makefile
+  text/x-c text/x-chdr text/x-csrc text/x-c++ text/x-c++hdr text/x-c++src
+  text/x-java text/x-moc text/x-pascal text/x-python text/x-rust
+  text/x-shellscript text/x-tcl text/x-tex
+  application/json application/toml application/x-shellscript application/x-yaml
+)
+
+for mime_type in "${mime_types[@]}"; do
+  xdg-mime default nvim.desktop "$mime_type"
+done
+xdg-mime default kitty.desktop x-scheme-handler/terminal
+
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}"
+printf 'kitty.desktop\n' > "${XDG_CONFIG_HOME:-$HOME/.config}/xdg-terminals.list"
+
+if command -v kwriteconfig6 >/dev/null 2>&1; then
+  kwriteconfig6 --file kdeglobals --group General --key TerminalApplication kitty
+  kwriteconfig6 --file kdeglobals --group General --key TerminalService kitty.desktop
+fi

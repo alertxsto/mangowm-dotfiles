@@ -34,7 +34,7 @@
     "orientation": "inherit",
     "modules": [
       "tray", "custom/separator#blank2", "custom/separator#dot", "custom/separator#blank3",
-      "custom/mode", "pulseaudio", "network", "bluetooth", "backlight", "power-profiles-daemon", "battery", "custom/notification"
+      "custom/mode", "pulseaudio", "network", "bluetooth", "backlight", "custom/tuned", "battery", "custom/notification"
     ]
   },
 
@@ -149,15 +149,12 @@
     "tooltip-format": "Brightness {percent}%",
     "scroll-step": 5
   },
-  "power-profiles-daemon": {
-    "format": "{icon}",
-    "tooltip-format": "Power profile: {profile}",
-    "format-icons": {
-      "default": "",
-      "performance": "",
-      "balanced": "",
-      "power-saver": ""
-    }
+  "custom/tuned": {
+    "exec": "$HOME/.config/waybar/tuned.sh",
+    "return-type": "json",
+    "interval": 2,
+    "on-click": "$HOME/.local/bin/toggle-popup tuned-popup",
+    "tooltip": true
   },
   "network": {
     "interface": "wl*",

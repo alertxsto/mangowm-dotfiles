@@ -98,6 +98,15 @@ install_system_packages() {
     esac
   done < "$repo_dir/packages.txt"
 
+  local -a conflicting_packages=()
+  pacman -Qq power-profiles-daemon &>/dev/null &&
+    conflicting_packages+=(power-profiles-daemon)
+  pacman -Qq power-profiles-daemon-openrc &>/dev/null &&
+    conflicting_packages+=(power-profiles-daemon-openrc)
+  if ((${#conflicting_packages[@]})); then
+    sudo pacman -Rns --noconfirm "${conflicting_packages[@]}"
+  fi
+
   yay -S --needed --noconfirm \
     "${repo_packages[@]}" \
     "${artix_packages[@]}" \
@@ -186,7 +195,9 @@ install_file "$repo_dir/.bashrc" '.bashrc'
 install_file "$repo_dir/.pam_environment" '.pam_environment'
 install_tree "$repo_dir/.config" '.config'
 install_tree "$repo_dir/.local" '.local'
+
 HOME="$target_home" XDG_CONFIG_HOME="$target_home/.config" \
+  XDG_DATA_HOME="$target_home/.local/share" \
   "$target_home/.local/bin/sync-default-apps"
 
 # Keep the selected Waybar variant active after refreshing tracked files.
@@ -255,7 +266,7 @@ build_native_utilities() {
   # A failed native build may leave this temporary directory for inspection.
   jobs="$(nproc)"
 
-  for project in network-popup bluetooth-popup mango-osd wallpaper-overview; do
+  for project in network-popup bluetooth-popup tuned-popup mango-osd wallpaper-overview; do
     project_dir="$build_root/$project"
     mkdir -p -- "$project_dir"
     (
@@ -275,12 +286,19 @@ fi
 enable_openrc_services() {
   [[ "$target_home" == "$HOME" ]] || die '--skip-services is required with a custom --target-home'
   command -v rc-update >/dev/null || die 'OpenRC rc-update is unavailable'
+  command -v rc-service >/dev/null || die 'OpenRC rc-service is unavailable'
+  sudo install -Dm0755 "$repo_dir/system/openrc/tuned-ppd" /etc/init.d/tuned-ppd
+  sudo install -Dm0644 "$repo_dir/system/tuned/ppd.conf" /etc/tuned/ppd.conf
 
   sudo rc-update add dbus boot
   sudo rc-update add NetworkManager default
   sudo rc-update add bluetoothd default
-  sudo rc-update add power-profiles-daemon default
+  sudo rc-update add tuned default
+  sudo rc-update add tuned-ppd default
   sudo rc-update add sddm default
+
+  sudo rc-service tuned start
+  sudo rc-service tuned-ppd start
 
   rc-update --user add dbus default
   rc-update --user add pipewire default

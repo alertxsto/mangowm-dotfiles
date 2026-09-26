@@ -33,6 +33,18 @@
   </tr>
 </table>
 
+### Instrument popups · current Osaka palette
+
+<table>
+  <tr>
+    <td width="33%"><img src="assets/wifi-popup.webp" alt="Instrument Wi-Fi popup showing its connected status and network list, with SSID redacted"><br><sub><b>Wi-Fi</b> — connection, scan, and network actions.</sub></td>
+    <td width="33%"><img src="assets/bluetooth-popup.webp" alt="Instrument Bluetooth popup with power-off empty state"><br><sub><b>Bluetooth</b> — power-off state and device controls.</sub></td>
+    <td width="33%"><img src="assets/tuned-popup.webp" alt="Instrument TuneD popup with active latency-performance profile and available profiles"><br><sub><b>TuneD</b> — active profile and available modes.</sub></td>
+  </tr>
+</table>
+
+Captured from the live Qt popups; the Wi-Fi SSID is redacted before publication. Popup accents and surfaces follow the active theme.
+
 > One wallpaper selection regenerates a consistent palette across the compositor, shell, terminal, launcher, notifications, GTK, KDE, and folder icons.
 
 This repository is an audited snapshot of the active desktop—not a loose collection of example configs. It excludes credentials, personal media, caches, generated binaries, and stale settings from other desktop sessions. The complete inclusion policy lives in [`AUDIT.md`](AUDIT.md).
@@ -55,7 +67,7 @@ This repository is an audited snapshot of the active desktop—not a loose colle
 
 - **One-command recoloring.** Named wallpaper folders apply curated palettes to MangoWM, Waybar, SwayNC, Rofi, Kitty, btop, LazyVim, Fish, Starship, Fastfetch, KDE, GTK, and Breeze folder icons; ungrouped wallpapers use Material Dark.
 - **Consistent terminal workflow.** Rofi, btop, and Neovim open through Kitty; Neovim owns text and source-code MIME types.
-- **Purpose-built desktop tools.** Native Qt wallpaper gallery, matching Wi-Fi and Bluetooth popups, and a volume/brightness OSD.
+- **Purpose-built desktop tools.** Native Qt wallpaper gallery, matching Wi-Fi, Bluetooth, and TuneD profile popups, plus a volume/brightness OSD.
 - **Responsive workflow.** Nine tags, directional navigation, touchpad gestures, blur, animations, scratchpads, and a compact status bar.
 - **Selectable Waybar layouts.** Switch between a full-width bar and floating dock from the status module; the choice survives installer refreshes.
 - **Event-driven status.** Custom Mango tag indicators update from compositor IPC instead of polling through `jq`.
@@ -111,7 +123,7 @@ Examples:
   --skip-services
 ```
 
-When `--target-home` differs from `$HOME`, use `--skip-services`; user OpenRC services belong to the real login account.
+When `--target-home` differs from `$HOME`, use `--skip-services`; user OpenRC services belong to the real login account. The installer also scopes XDG configuration and data paths to the target home while registering application defaults.
 
 ## What `install.sh` does
 
@@ -122,8 +134,8 @@ When `--target-home` differs from `$HOME`, use `--skip-services`; user OpenRC se
 5. Replaces `__HOME__` placeholders with the actual target path.
 6. Registers Kitty and Neovim as desktop defaults and restores the selected Waybar layout.
 7. Detects the Wi-Fi interface and backlight device.
-8. Builds the Wi-Fi, Bluetooth, OSD, and wallpaper utilities from source.
-9. Enables required system and user OpenRC services.
+8. Builds the Wi-Fi, Bluetooth, TuneD profile, OSD, and wallpaper utilities from source.
+9. Replaces `power-profiles-daemon` with TuneD, installs its PPD mapping and OpenRC service, then enables required system and user services.
 
 ### Existing-file safety
 
@@ -159,10 +171,12 @@ Identical files and matching symlinks are left in place. Re-running the installe
 │   └── share/
 │       ├── network-popup/     # Qt Wi-Fi popup source
 │       ├── bluetooth-popup/   # Qt Bluetooth popup source
+│       ├── tuned-popup/       # Qt TuneD profile selector source
 │       ├── mango-osd/         # Qt OSD source
 │       ├── wallpaper-overview/ # Qt wallpaper gallery source
 │       ├── applications/      # terminal-first desktop launchers
 │       └── color-schemes/     # KDE fallback color scheme
+├── system/                    # TuneD profile mapping and OpenRC service
 ├── AUDIT.md                   # system audit and exclusions
 ├── packages.txt               # repository, AUR, and OpenRC packages
 └── install.sh                 # installer, builder, and service setup
@@ -241,6 +255,10 @@ active config and stylesheet, restarts Waybar, and records the choice in
 `~/.config/waybar/.mode`. `install.sh` reapplies that profile after refreshing
 the tracked files.
 
+The TuneD indicator reads `/etc/tuned/active_profile` every two seconds.
+Reading the daemon-maintained file avoids repeatedly starting Python via
+`tuned-adm active`; clicking the indicator still opens the profile selector.
+
 ## Custom utilities
 
 ### Connectivity popups
@@ -258,6 +276,20 @@ the tracked files.
 
 Launch either popup from its Waybar module. Clicking the same module again, pressing
 Escape, or moving focus away closes it.
+
+### TuneD power profiles
+
+The Waybar gauge opens `tuned-popup`, a focused selector for laptop-relevant
+TuneD profiles. The installer replaces `power-profiles-daemon` with
+`tuned-ppd`, maps PPD power saver to `laptop-battery-powersave`, builds the
+popup from source, and enables both `tuned` and `tuned-ppd` through OpenRC.
+
+The Wi-Fi, Bluetooth, and TuneD popups share an Instrument-style Qt Quick UI:
+sharp-edged controls, a live status summary, and a flat list with separate
+keyboard selection and connected/active indicators. Each popup reads the
+generated `~/.config/rofi/colors.rasi` palette when opened, so the accent and
+surfaces follow the selected wallpaper theme rather than a fixed color. Reopen
+an already-open popup after changing themes to load the new palette.
 
 ### `mango-osd`
 
@@ -294,6 +326,7 @@ Floating Qt Quick wallpaper browser with animated keyboard and pointer navigatio
 | `Super+W` | Open wallpaper gallery |
 | `Super+R` | Regenerate colors from the current wallpaper |
 | `Print` | Select and capture a screen region; save and copy it |
+| `Super+Shift+S` | Select a screen region, annotate in floating Satty, then copy the edited image with `Ctrl+C` |
 | `Super+Q` | Close focused client |
 | `Super+M` | Exit MangoWM |
 
@@ -324,6 +357,11 @@ Floating Qt Quick wallpaper browser with animated keyboard and pointer navigatio
 | `Ctrl+Left/Right` | View adjacent tag |
 | `Alt+Shift+Left/Right` | Focus adjacent monitor |
 | `Super+Alt+Left/Right` | Move client to adjacent monitor |
+
+
+### Workspace layouts
+
+All nine tags default to `dwindle` (Hyprland-style). `Super+1..9` switches tags; `Super+N` changes the current tag's layout. To change the defaults, edit the `layout_name` rules in `~/.config/mango/config.conf`.
 
 ### Geometry
 

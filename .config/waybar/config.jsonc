@@ -7,6 +7,9 @@
   "gtk-layer-shell": true,
   "spacing": 0,
   "height": 35,
+  "margin-top": 2,
+  "margin-left": 10,
+  "margin-right": 10,
   "modules-left": ["custom/artix", "custom/active_window"],
   "modules-center": ["group/center3", "group/workspaces", "group/center2"],
   "modules-right": ["group/right1"],
@@ -31,7 +34,7 @@
     "orientation": "inherit",
     "modules": [
       "tray", "custom/separator#blank2", "custom/separator#dot", "custom/separator#blank3",
-      "custom/mode", "pulseaudio", "network", "bluetooth", "backlight", "power-profiles-daemon", "battery", "custom/notification"
+      "custom/mode", "pulseaudio", "network", "bluetooth", "backlight", "custom/tuned", "battery", "custom/notification"
     ]
   },
 
@@ -146,15 +149,12 @@
     "tooltip-format": "Brightness {percent}%",
     "scroll-step": 5
   },
-  "power-profiles-daemon": {
-    "format": "{icon}",
-    "tooltip-format": "Power profile: {profile}",
-    "format-icons": {
-      "default": "",
-      "performance": "",
-      "balanced": "",
-      "power-saver": ""
-    }
+  "custom/tuned": {
+    "exec": "$HOME/.config/waybar/tuned.sh",
+    "return-type": "json",
+    "interval": 2,
+    "on-click": "$HOME/.local/bin/toggle-popup tuned-popup",
+    "tooltip": true
   },
   "network": {
     "interface": "wl*",

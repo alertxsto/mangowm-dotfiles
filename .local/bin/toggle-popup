@@ -2,12 +2,12 @@
 set -u
 
 if (($# != 1)); then
-  printf 'Usage: toggle-popup {network-popup|bluetooth-popup}\n' >&2
+  printf 'Usage: toggle-popup {network-popup|bluetooth-popup|tuned-popup}\n' >&2
   exit 2
 fi
 
 case "$1" in
-  network-popup|bluetooth-popup) popup="$1" ;;
+  network-popup|bluetooth-popup|tuned-popup) popup="$1" ;;
   *)
     printf 'toggle-popup: unsupported popup: %s\n' "$1" >&2
     exit 2

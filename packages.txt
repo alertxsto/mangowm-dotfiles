@@ -41,7 +41,8 @@ plasma-integration
 plasma-workspace
 polkit
 polkit-kde-agent
-power-profiles-daemon
+tuned
+tuned-ppd
 procps-ng
 python
 qt6-base
@@ -52,6 +53,7 @@ sudo
 rofi
 sddm
 slurp
+satty
 starship
 swaybg
 swaync
@@ -78,7 +80,7 @@ mangowm-git
 
 # Artix/OpenRC packages
 networkmanager-openrc
-power-profiles-daemon-openrc
+tuned-openrc
 sddm-openrc
 dbus-openrc
 pipewire-openrc

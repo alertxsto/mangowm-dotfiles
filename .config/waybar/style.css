@@ -9,11 +9,16 @@
 }
 
 .modules-left { margin-left: 8px; }
-.modules-right { margin-right: 0; }
+.modules-right { margin-right: 8px; }
 
 window#waybar {
-  background-color: @surface;
+  background: transparent;
   color: @on_surface;
+}
+
+window#waybar > box {
+  background: @surface;
+  border-radius: 16px;
   transition: background-color 0.5s ease;
 }
 
@@ -160,7 +165,7 @@ window#waybar {
 #bluetooth,
 #backlight,
 #network,
-#power-profiles-daemon,
+#custom-tuned,
 #battery,
 #custom-notification {
   min-height: 25px;
@@ -184,7 +189,7 @@ window#waybar {
 #bluetooth:hover,
 #backlight:hover,
 #network:hover,
-#power-profiles-daemon:hover,
+#custom-tuned:hover,
 #battery:hover,
 #custom-notification:hover {
   background: alpha(@primary_container, 0.54);
@@ -205,11 +210,12 @@ window#waybar {
 #bluetooth { color: @blue; }
 #backlight { color: @yellow; }
 #network { color: @cyan; }
-#battery { color: @green; }
-#custom-notification { color: @yellow; }
-#power-profiles-daemon.performance { color: @red; }
-#power-profiles-daemon.balanced { color: @yellow; }
-#power-profiles-daemon.power-saver { color: @green; }
+#custom-tuned { color: @green; }
+#custom-tuned.power-saver { color: @green; }
+#custom-tuned.balanced { color: @yellow; }
+#custom-tuned.performance { color: @red; }
+#custom-tuned.latency { color: @magenta; }
+#custom-tuned.unavailable { color: @error; }
 #battery.warning:not(.charging) { color: @yellow; }
 #battery.critical:not(.charging) { color: @error; }
 

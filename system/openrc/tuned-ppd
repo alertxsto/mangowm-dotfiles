@@ -1,0 +1,12 @@
+#!/sbin/openrc-run
+
+description="PPD-to-TuneD API Translation Daemon"
+command="/usr/bin/tuned-ppd"
+command_args="-l"
+command_background="yes"
+pidfile="/run/tuned-ppd.pid"
+command_user="root"
+
+depend() {
+	need dbus tuned
+}

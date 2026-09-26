@@ -212,7 +212,7 @@ if [[ -r "$waybar_mode_file" ]]; then
   fi
 fi
 
-# Clean cutover from the former wallpaper-derived Matugen pipeline.
+# Clean up the retired Matugen pipeline left by older installs.
 rm -rf -- "$target_home/.config/matugen"
 rm -f -- "$target_home/.config/fish/conf.d/matugen-colors.fish"
 

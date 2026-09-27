@@ -1,4 +1,10 @@
-# Current system audit
+# Source-system audit (Artix snapshot)
+
+This records the original live Artix/OpenRC system from which the tracked
+configuration was collected; it is not a claim that every supported target
+uses OpenRC. Normal installation now also supports Arch Linux and CachyOS
+(systemd) via `/etc/os-release` IDs `arch` and `cachyos`, while retaining Artix
+(`artix`) and its OpenRC service setup.
 
 ## Session path
 
@@ -55,10 +61,11 @@ The repository contains source and qmake projects for:
 
 - `network-popup`: Qt Quick NetworkManager frontend;
 - `bluetooth-popup`: Qt Quick BlueZ frontend;
+- `tuned-popup`: Qt Quick TuneD profile selector;
 - `mango-osd`: Qt Quick volume and brightness OSD with a per-user local socket;
 - `wallpaper-overview`: Qt Quick gallery with cached thumbnails.
 
-`install.sh` rebuilds all four. Prebuilt ELF files are intentionally not tracked.
+`install.sh` rebuilds all five. Prebuilt ELF files are intentionally not tracked.
 
 ## Portability findings
 
@@ -66,7 +73,7 @@ The repository contains source and qmake projects for:
 - The live system uses backlight device `amdgpu_bl2`. The installer detects `/sys/class/backlight` and rewrites the installed brightness helper.
 - Palette generation is implemented with Python's standard library and has no external theme-generator dependency.
 - No wallpaper is committed. If `~/Pictures/blinders.jpg`, the remembered wallpaper, and all Pictures images are absent, the bundled fallback palette remains usable.
-- The package/service automation intentionally targets Artix Linux and OpenRC. `--skip-packages --skip-services` allows config-only installation elsewhere.
+- Originally, package/service automation targeted only Artix with OpenRC; it now selects Artix/OpenRC or Arch/CachyOS/systemd, with `--skip-packages --skip-services` available for config-only installation elsewhere. Mango exports the session environment to D-Bus and to the systemd user manager where present.
 
 ## Tracked configuration coverage
 

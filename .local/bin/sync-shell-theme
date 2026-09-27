@@ -106,6 +106,7 @@ format = "[$symbol]($style) "
 [os.symbols]
 Artix = "■"
 Arch = "■"
+CachyOS = "■"
 Linux = "■"
 
 [username]
@@ -189,7 +190,7 @@ def render_fastfetch(c: dict[str, str]) -> None:
         "modules": [
             "break",
             {"type": "title", "format": f"{bright}{{user-name}}{reset}{muted} @ {reset}{bright}{{host-name}}{reset}"},
-            {"type": "custom", "format": f"{primary}■{reset} {muted}ARTIX · MANGO · a themed desktop{reset}"},
+            {"type": "custom", "format": f"{primary}■{reset} {muted}MANGO · a themed desktop{reset}"},
             "break",
             {"type": "custom", "format": f"{primary}──{reset} {bright}VITALS{reset} {outline}{rule}{reset}"},
             {"type": "cpu", "key": "CPU"},

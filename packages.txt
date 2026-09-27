@@ -1,4 +1,4 @@
-# Repository packages
+# Common repository packages (Arch, CachyOS, Artix)
 bash
 base-devel
 bat
@@ -73,7 +73,7 @@ xdg-utils
 xorg-xwayland
 xsettingsd
 
-# AUR packages
+# Common AUR packages
 brave-beta-bin
 bibata-cursor-theme-bin
 mangowm-git
@@ -86,4 +86,3 @@ dbus-openrc
 pipewire-openrc
 elogind-openrc
 bluez-openrc
-artix-dark-theme

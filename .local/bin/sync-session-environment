@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Systemd user units and D-Bus services need the compositor's session variables.
+# OpenRC has no systemd user manager, so only update the D-Bus activation env.
+args=(QT_QPA_PLATFORMTHEME TERMINAL EDITOR VISUAL XDG_CURRENT_DESKTOP XDG_SESSION_TYPE WAYLAND_DISPLAY)
+if [[ -d /run/systemd/system ]]; then
+  dbus-update-activation-environment --systemd "${args[@]}"
+else
+  dbus-update-activation-environment "${args[@]}"
+fi

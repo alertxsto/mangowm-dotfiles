@@ -10,7 +10,7 @@
   "margin-top": 2,
   "margin-left": 10,
   "margin-right": 10,
-  "modules-left": ["custom/artix", "custom/active_window"],
+  "modules-left": ["custom/launcher", "custom/active_window"],
   "modules-center": ["group/center3", "group/workspaces", "group/center2"],
   "modules-right": ["group/right1"],
 
@@ -38,8 +38,8 @@
     ]
   },
 
-  "custom/artix": {
-    "format": "",
+  "custom/launcher": {
+    "format": "■",
     "tooltip-format": "Applications  •  Super+D",
     "on-click": "rofi -show drun",
     "on-click-right": "kitty"

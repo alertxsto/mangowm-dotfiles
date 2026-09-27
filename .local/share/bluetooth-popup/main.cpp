@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <bluetooth/bluetooth.h>
 #include <QDir>
 #include <QFile>
 #include <QGuiApplication>
@@ -13,6 +14,7 @@
 #include <QRegularExpression>
 #include <QTextStream>
 #include <QThread>
+#include <QTimer>
 #include <QVariantList>
 #include <unistd.h>
 

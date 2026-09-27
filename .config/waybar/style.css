@@ -22,7 +22,7 @@ window#waybar > box {
   transition: background-color 0.5s ease;
 }
 
-#custom-artix {
+#custom-launcher {
   color: @primary;
   background: alpha(@on_surface, 0.10);
   border-radius: 99px;

@@ -29,6 +29,7 @@ format = "[$symbol]($style) "
 [os.symbols]
 Artix = "■"
 Arch = "■"
+CachyOS = "■"
 Linux = "■"
 
 [username]

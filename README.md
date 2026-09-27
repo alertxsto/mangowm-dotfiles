@@ -2,13 +2,13 @@
 
 # MangoWM Dotfiles
 
-**A cohesive, wallpaper-driven Wayland desktop for Artix Linux.**
+**A cohesive, wallpaper-driven Wayland desktop for Arch Linux, CachyOS, and Artix Linux.**
 
-[![Artix Linux](https://img.shields.io/badge/Artix_Linux-1793D1?style=for-the-badge&logo=archlinux&logoColor=white)](https://artixlinux.org/) [![Wayland](https://img.shields.io/badge/Wayland-111111?style=for-the-badge&logo=wayland&logoColor=white)](https://wayland.freedesktop.org/) [![MangoWM](https://img.shields.io/badge/MangoWM-Themed-8FA4B8?style=for-the-badge)](https://github.com/mangowm/mango)
+[![Arch family](https://img.shields.io/badge/Arch%20%2F%20CachyOS%20%2F%20Artix-1793D1?style=for-the-badge&logo=archlinux&logoColor=white)](https://archlinux.org/) [![Wayland](https://img.shields.io/badge/Wayland-111111?style=for-the-badge&logo=wayland&logoColor=white)](https://wayland.freedesktop.org/) [![MangoWM](https://img.shields.io/badge/MangoWM-Themed-8FA4B8?style=for-the-badge)](https://github.com/mangowm/mango)
 
 <img src="assets/desktop.webp" alt="MangoWM desktop with Waybar, Kitty, and Fastfetch" width="100%">
 
-<sub>MangoWM · Waybar · SwayNC · Rofi · Kitty · btop · LazyVim · OpenRC</sub>
+<sub>MangoWM · Waybar · SwayNC · Rofi · Kitty · btop · LazyVim · systemd / OpenRC</sub>
 
 <br><br>
 
@@ -53,7 +53,7 @@ This repository is an audited snapshot of the active desktop—not a loose colle
 
 | Layer | Choice |
 |---|---|
-| Distribution / init | Artix Linux / OpenRC |
+| Distribution / init | Arch Linux or CachyOS / systemd; Artix Linux / OpenRC |
 | Login / session | SDDM / Wayland |
 | Compositor | MangoWM |
 | Bar / notifications | Waybar / SwayNC |
@@ -71,14 +71,14 @@ This repository is an audited snapshot of the active desktop—not a loose colle
 - **Responsive workflow.** Nine tags, directional navigation, touchpad gestures, blur, animations, scratchpads, and a compact status bar.
 - **Selectable Waybar layouts.** Switch between a full-width bar and floating dock from the status module; the choice survives installer refreshes.
 - **Event-driven status.** Custom Mango tag indicators update from compositor IPC instead of polling through `jq`.
-- **Audited deployment.** The installer adapts hardware names, builds local tools from source, configures OpenRC services, and backs up every conflict.
+- **Audited deployment.** The installer adapts hardware names, builds local tools from source, configures distro-appropriate services, and backs up every conflict.
 - **Repeatable installation.** Identical files and matching symlinks are left untouched, making subsequent installs idempotent.
 
 ## Installation
 
 ### Supported target
 
-The automatic package and service setup targets **Artix Linux with OpenRC**. Config-only installation is possible on another Arch-family environment with the skip options described below.
+The normal package and service setup supports `/etc/os-release` IDs `arch` and `cachyos` (systemd) and `artix` (OpenRC). Other systems can use config-only installation with the skip options below.
 
 ### Normal installation
 
@@ -88,7 +88,20 @@ cd ~/mangowm-dotfiles
 ./install.sh
 ```
 
-The installer may request `sudo` for packages and system OpenRC services. It runs AUR package builds as the regular user.
+The installer may request `sudo` for packages and system services (`systemctl` on Arch/CachyOS, `rc-update`/`rc-service` on Artix). It runs AUR package builds as the regular user.
+
+On a terminal, the installer opens a keyboard-driven selection screen with
+the `alertxsto` wordmark. Use **Up/Down** or **j/k** to move, **Space** to
+toggle packages, Qt builds, or login services, and **Enter** to review the
+plan. On the review screen, **y** starts installation, **e** edits the
+selection, and **q** cancels without changing anything. CLI skip options stay
+locked; a custom `--target-home` disables login services. The full supplied
+wordmark needs a terminal at least 118 columns wide and 26 rows high;
+smaller terminals get a compact label. Colors are disabled with `NO_COLOR=1`.
+
+If `power-profiles-daemon` is already installed on Arch/CachyOS, approve the
+interactive `yay` prompt to replace it with `tuned-ppd`; the same transaction
+preserves packages depending on the power-profiles provider.
 
 After installation:
 
@@ -105,8 +118,9 @@ A generated fallback palette is included, so Waybar and the desktop remain usabl
 ```text
 --target-home PATH  Install into PATH instead of $HOME
 --skip-packages     Do not install pacman/AUR packages
---skip-services     Do not enable OpenRC services
+--skip-services     Do not enable systemd/OpenRC services
 --skip-build        Do not build the native Qt utilities
+--yes               Use selected steps without interactive questions
 -h, --help          Show installer help
 ```
 
@@ -116,6 +130,9 @@ Examples:
 # Install only the configuration files
 ./install.sh --skip-packages --skip-services
 
+# Use preselected steps without installer questions (e.g. from a script)
+./install.sh --yes --skip-services
+
 # Populate an isolated home for inspection
 ./install.sh \
   --target-home /tmp/mango-home \
@@ -123,11 +140,16 @@ Examples:
   --skip-services
 ```
 
-When `--target-home` differs from `$HOME`, use `--skip-services`; user OpenRC services belong to the real login account. The installer also scopes XDG configuration and data paths to the target home while registering application defaults.
+When `--target-home` differs from `$HOME`, use `--skip-services`; user services belong to the real login account. The installer also scopes XDG configuration and data paths to the target home while registering application defaults.
+
+Without a terminal, the installer runs the selected steps without its selection
+screen. `--yes` does the same in a terminal; neither mode answers prompts from
+`sudo` or `yay`. If an existing `power-profiles-daemon` requires a replacement
+prompt, run that package step in an interactive terminal.
 
 ## What `install.sh` does
 
-1. Verifies that the package-install path is running on Artix Linux.
+1. Identifies supported systems by `/etc/os-release` ID (`arch`, `cachyos`, or `artix`) for package and service setup.
 2. Bootstraps `yay` when necessary.
 3. Installs repository and AUR dependencies listed in [`packages.txt`](packages.txt).
 4. Copies the tracked home tree into the selected target home.
@@ -135,7 +157,15 @@ When `--target-home` differs from `$HOME`, use `--skip-services`; user OpenRC se
 6. Registers Kitty and Neovim as desktop defaults and restores the selected Waybar layout.
 7. Detects the Wi-Fi interface and backlight device.
 8. Builds the Wi-Fi, Bluetooth, TuneD profile, OSD, and wallpaper utilities from source.
-9. Replaces `power-profiles-daemon` with TuneD, installs its PPD mapping and OpenRC service, then enables required system and user services.
+9. Replaces `power-profiles-daemon` with TuneD, installs its PPD mapping, then enables the required system and user services through systemd or OpenRC.
+
+On Arch/CachyOS, the installer enables `NetworkManager`, `bluetooth`, `tuned`,
+`tuned-ppd`, and `sddm` as systemd system units, starts the TuneD units, and
+enables the user `pipewire.socket`, `pipewire-pulse.socket`, and
+`wireplumber.service`. On Artix, it enables the corresponding OpenRC system
+services and user D-Bus/PipeWire/WirePlumber services. Mango exports Wayland
+and Qt session variables to D-Bus and, on systemd hosts, the user service
+manager before launching desktop applications.
 
 ### Existing-file safety
 
@@ -176,9 +206,9 @@ Identical files and matching symlinks are left in place. Re-running the installe
 │       ├── wallpaper-overview/ # Qt wallpaper gallery source
 │       ├── applications/      # terminal-first desktop launchers
 │       └── color-schemes/     # KDE fallback color scheme
-├── system/                    # TuneD profile mapping and OpenRC service
+├── system/                    # TuneD profile mapping and Artix OpenRC service
 ├── AUDIT.md                   # system audit and exclusions
-├── packages.txt               # repository, AUR, and OpenRC packages
+├── packages.txt               # repository, AUR, and Artix/OpenRC packages
 └── install.sh                 # installer, builder, and service setup
 ```
 
@@ -213,6 +243,11 @@ Without an argument, it uses this precedence:
 4. The tracked fallback palette when no image exists.
 
 The theme command reloads MangoWM, Waybar, Kitty, btop, and SwayNC after regenerating colors. Running LazyVim instances watch the generated palette and recolor immediately; Fish reloads its generated colors at the next prompt.
+
+GTK uses portable Adwaita styling with the generated GTK3/GTK4 color overrides;
+Qt applications use the generated KDE color scheme instead of Artix-only
+`qt5ct`/`qt6ct` theme files. The Waybar launcher and Fastfetch banner use
+Mango branding on all three distributions.
 
 ### Cursor theme
 
@@ -280,9 +315,10 @@ Escape, or moving focus away closes it.
 ### TuneD power profiles
 
 The Waybar gauge opens `tuned-popup`, a focused selector for laptop-relevant
-TuneD profiles. The installer replaces `power-profiles-daemon` with
-`tuned-ppd`, maps PPD power saver to `laptop-battery-powersave`, builds the
-popup from source, and enables both `tuned` and `tuned-ppd` through OpenRC.
+TuneD profiles. TuneD and `tuned-ppd` replace `power-profiles-daemon`, mapping
+PPD power saver to `laptop-battery-powersave`. The installer builds the popup
+from source and enables both services with systemd on Arch/CachyOS or OpenRC
+on Artix.
 
 The Wi-Fi, Bluetooth, and TuneD popups share an Instrument-style Qt Quick UI:
 sharp-edged controls, a live status summary, and a flat list with separate
@@ -417,6 +453,23 @@ mango -p -c ~/.config/mango/config.conf
 
 ## Troubleshooting
 
+### Check desktop services
+
+On Arch/CachyOS (systemd):
+
+```bash
+systemctl status NetworkManager.service bluetooth.service tuned.service tuned-ppd.service sddm.service
+systemctl --user status pipewire.socket pipewire-pulse.socket wireplumber.service
+```
+
+On Artix (OpenRC):
+
+```bash
+rc-service tuned status
+rc-service tuned-ppd status
+rc-update --user show
+```
+
 ### Waybar does not start on login
 
 Run it directly to inspect its configuration:
@@ -435,13 +488,13 @@ SwayNC must own `org.freedesktop.Notifications` before Brave starts:
 busctl --user status org.freedesktop.Notifications
 ```
 
-The installer publishes the session bus address through `.pam_environment`, and
-the user Brave launcher supplies it immediately through `brave-session`. The
-wrapper discovers the installed Brave executable (`brave-beta`,
-`brave-browser-beta`, `brave-browser`, or `brave`), so the fix is not tied to
-one package path. Fully quit Brave and installed Brave web apps before
-reopening them. Sign out once after the first install so every Mango-launched
-application inherits the bus address directly.
+The `brave-session` launcher supplies the session bus address from
+`$XDG_RUNTIME_DIR/bus` if the login environment did not set it. It discovers
+the installed Brave executable (`brave-beta`, `brave-browser-beta`,
+`brave-browser`, or `brave`), so the fix is not tied to one package path.
+Fully quit Brave and installed Brave web apps before reopening them. Sign out
+once after the first install so Mango and D-Bus/user services inherit the
+session environment.
 
 ### OBS screen capture under Mango
 

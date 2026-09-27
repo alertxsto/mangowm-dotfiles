@@ -47,7 +47,7 @@ Captured from the live Qt popups; the Wi-Fi SSID is redacted before publication.
 
 > One wallpaper selection regenerates a consistent palette across the compositor, shell, terminal, launcher, notifications, GTK, KDE, and folder icons.
 
-This repository is an audited snapshot of the active desktop—not a loose collection of example configs. It excludes credentials, personal media, caches, generated binaries, and stale settings from other desktop sessions. The complete inclusion policy lives in [`AUDIT.md`](AUDIT.md).
+This repository is an audited snapshot of the active desktop—not a loose collection of example configs. It excludes credentials, caches, generated binaries, and stale settings from other desktop sessions; the bundled wallpaper collection is an explicit exception to the personal-media exclusion. The complete inclusion policy lives in [`AUDIT.md`](AUDIT.md).
 
 ## Desktop stack
 
@@ -105,13 +105,12 @@ preserves packages depending on the power-profiles provider.
 
 After installation:
 
-1. Put at least one `.jpg`, `.jpeg`, `.png`, or `.webp` image under `~/Pictures`.
-2. Log out.
-3. Select **Mango** in SDDM.
-4. Log back in.
-5. Press `Super+W` to choose a wallpaper, or run `theme-wallpaper /path/to/image`.
+1. Log out.
+2. Select **Mango** in SDDM.
+3. Log back in.
+4. Press `Super+W` to choose one of the bundled wallpapers, or run `theme-wallpaper /path/to/image`.
 
-A generated fallback palette is included, so Waybar and the desktop remain usable even before a wallpaper is available.
+The installer seeds `~/Pictures/Wallpapers` and `~/Pictures/blinders.jpg` from the repository without replacing existing files. Add more images under `~/Pictures` as desired. A generated fallback palette remains available if no image exists.
 
 ### Installer options
 

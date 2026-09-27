@@ -429,6 +429,15 @@ install_file "$repo_dir/.pam_environment" '.pam_environment'
 install_tree "$repo_dir/.config" '.config'
 install_tree "$repo_dir/.local" '.local'
 
+# Seed the bundled gallery without replacing wallpapers already in Pictures.
+while IFS= read -r -d '' source; do
+  relative="${source#"$repo_dir"/}"
+  destination="$target_home/$relative"
+  if [[ ! -e "$destination" && ! -L "$destination" ]]; then
+    install -Dm0644 "$source" "$destination"
+  fi
+done < <(find "$repo_dir/Pictures" -type f -print0)
+
 HOME="$target_home" XDG_CONFIG_HOME="$target_home/.config" \
   XDG_DATA_HOME="$target_home/.local/share" \
   "$target_home/.local/bin/sync-default-apps"

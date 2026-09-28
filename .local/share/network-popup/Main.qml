@@ -35,14 +35,7 @@ Window {
     property bool everActive: false
     property bool initialScanPending: true
     readonly property bool isScanning: networkController.scanning || initialScanPending
-    readonly property string connectedSsid: {
-        const networks = networkController.networks
-        for (let i = 0; i < networks.length; ++i) {
-            if (networks[i].active)
-                return networks[i].ssid
-        }
-        return ""
-    }
+    readonly property string connectedSsid: networkController.activeSsid
 
     Component.onCompleted: activationTimer.start()
     onActiveChanged: {
@@ -65,12 +58,12 @@ Window {
     }
     Shortcut {
         sequence: "Return"
-        enabled: root.passwordSsid === "" && networkList.currentIndex >= 0 && networkList.currentIndex < networkList.count
+        enabled: root.passwordSsid === "" && !networkController.busy && networkList.currentIndex >= 0 && networkList.currentIndex < networkList.count
         onActivated: networkController.activate(networkList.currentIndex)
     }
     Shortcut {
         sequence: "Enter"
-        enabled: root.passwordSsid === "" && networkList.currentIndex >= 0 && networkList.currentIndex < networkList.count
+        enabled: root.passwordSsid === "" && !networkController.busy && networkList.currentIndex >= 0 && networkList.currentIndex < networkList.count
         onActivated: networkController.activate(networkList.currentIndex)
     }
 
@@ -84,6 +77,10 @@ Window {
             root.passwordSsid = ssid
             password.clear()
             password.forceActiveFocus()
+        }
+        function onConnectionSucceeded() {
+            password.clear()
+            root.passwordSsid = ""
         }
     }
 
@@ -141,8 +138,10 @@ Window {
                 }
                 Item { Layout.fillWidth: true }
                 Label {
-                    text: root.isScanning ? "SCANNING" : "READY"
-                    color: root.isScanning ? root.primary : root.muted
+                    text: root.isScanning ? "SCANNING" : (networkController.busy ? "WORKING"
+                          : (!networkController.radioKnown ? "CHECKING"
+                          : (networkController.wifiEnabled ? "READY" : "OFFLINE")))
+                    color: root.isScanning || networkController.busy ? root.primary : root.muted
                     font.pixelSize: 10
                     font.weight: Font.DemiBold
                     font.letterSpacing: 0.8
@@ -163,7 +162,10 @@ Window {
                 Layout.fillWidth: true
                 Layout.topMargin: 4
                 text: root.connectedSsid !== "" ? root.connectedSsid
-                     : (root.isScanning ? "Finding networks" : "Not connected")
+                     : (!networkController.radioKnown ? "Checking Wi-Fi"
+                     : (!networkController.wifiEnabled ? "Wi-Fi is off"
+                     : (networkController.connected ? "Connected to Wi-Fi"
+                     : (root.isScanning ? "Finding networks" : "Not connected"))))
                 color: root.text
                 font.pixelSize: 25
                 font.weight: Font.DemiBold
@@ -172,9 +174,15 @@ Window {
             Label {
                 Layout.fillWidth: true
                 Layout.topMargin: 5
-                text: root.isScanning ? "Scanning nearby access points"
-                     : (root.connectedSsid !== "" ? "Wi-Fi connection active" : "Select a network to connect")
-                color: root.muted
+                text: networkController.errorMessage !== "" ? networkController.errorMessage
+                     : (networkController.message !== "" ? networkController.message
+                     : (!networkController.radioKnown ? "Reading NetworkManager state"
+                     : (!networkController.wifiEnabled ? "Turn on Wi-Fi to see nearby networks"
+                     : (root.isScanning ? "Scanning nearby access points"
+                     : (networkController.connected ? "Wi-Fi connection active"
+                     : "Select a network to connect")))))
+                color: networkController.errorMessage !== "" ? root.primary : root.muted
+                elide: Text.ElideRight
                 font.pixelSize: 11
             }
 
@@ -191,7 +199,7 @@ Window {
                 spacing: 7
                 InstrumentButton {
                     text: "Refresh"
-                    enabled: !networkController.scanning
+                    enabled: !networkController.busy && networkController.wifiEnabled && !networkController.scanning
                     onClicked: networkController.refresh()
                 }
                 InstrumentButton {
@@ -200,8 +208,9 @@ Window {
                 }
                 Item { Layout.fillWidth: true }
                 InstrumentButton {
-                    text: "Wi-Fi off"
-                    onClicked: networkController.wifiOff()
+                    text: networkController.wifiEnabled ? "Wi-Fi off" : "Wi-Fi on"
+                    enabled: networkController.radioKnown && !networkController.busy
+                    onClicked: networkController.setWifiEnabled(!networkController.wifiEnabled)
                 }
             }
 
@@ -218,7 +227,8 @@ Window {
                 }
                 Item { Layout.fillWidth: true }
                 Label {
-                    text: root.isScanning ? "SEARCHING" : networkList.count + " FOUND"
+                    text: !networkController.wifiEnabled ? "OFFLINE"
+                          : (root.isScanning ? "SEARCHING" : networkList.count + " FOUND")
                     color: root.muted
                     font.pixelSize: 10
                     font.weight: Font.DemiBold
@@ -314,7 +324,7 @@ Window {
                             anchors.fill: parent
                             hoverEnabled: true
                             onEntered: networkList.currentIndex = index
-                            onClicked: networkController.activate(index)
+                            onClicked: if (!networkController.busy) networkController.activate(index)
                         }
                     }
                 }
@@ -325,15 +335,18 @@ Window {
                     spacing: 7
                     Label {
                         Layout.alignment: Qt.AlignHCenter
-                        text: root.isScanning ? "Scanning for networks" : "No networks found"
+                        text: !networkController.radioKnown ? "Checking Wi-Fi"
+                              : (!networkController.wifiEnabled ? "Wi-Fi is off"
+                              : (root.isScanning ? "Scanning for networks" : "No networks found"))
                         color: root.text
                         font.pixelSize: 15
                         font.weight: Font.DemiBold
                     }
                     Label {
                         Layout.alignment: Qt.AlignHCenter
-                        text: root.isScanning ? "Nearby networks will appear here"
-                             : "Refresh to scan again or open Advanced"
+                        text: !networkController.wifiEnabled ? "Turn on Wi-Fi to find networks"
+                              : (root.isScanning ? "Nearby networks will appear here"
+                              : "Refresh to scan again or open Advanced")
                         color: root.muted
                         font.pixelSize: 11
                     }
@@ -427,13 +440,24 @@ Window {
                 selectionColor: root.primary
                 selectedTextColor: root.onPrimary
                 font.pixelSize: 13
-                onAccepted: if (text.length > 0) networkController.connectWithPassword(root.passwordSsid, text)
+                onAccepted: if (text.length > 0 && !networkController.busy)
+                                networkController.connectWithPassword(root.passwordSsid, text)
                 background: Rectangle {
                     color: root.raised
                     border.color: password.activeFocus ? root.primary : root.outline
                     border.width: 1
                     radius: 3
                 }
+            }
+            Label {
+                Layout.fillWidth: true
+                Layout.topMargin: 12
+                visible: networkController.errorMessage !== "" || networkController.busy
+                text: networkController.errorMessage !== ""
+                      ? networkController.errorMessage : networkController.message
+                color: networkController.errorMessage !== "" ? root.primary : root.muted
+                wrapMode: Text.Wrap
+                font.pixelSize: 11
             }
             Item { Layout.fillHeight: true }
             RowLayout {
@@ -451,7 +475,7 @@ Window {
                 InstrumentButton {
                     text: "Connect"
                     emphasized: true
-                    enabled: password.text.length > 0
+                    enabled: password.text.length > 0 && !networkController.busy
                     onClicked: networkController.connectWithPassword(root.passwordSsid, password.text)
                 }
             }

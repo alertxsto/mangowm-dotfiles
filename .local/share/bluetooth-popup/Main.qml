@@ -62,12 +62,12 @@ Window {
     Shortcut {
         sequence: "Up"
         enabled: deviceList.count > 0
-        onActivated: deviceList.currentIndex = Math.max(0, deviceList.currentIndex - 1)
+        onActivated: deviceList.select(Math.max(0, deviceList.currentIndex - 1))
     }
     Shortcut {
         sequence: "Down"
         enabled: deviceList.count > 0
-        onActivated: deviceList.currentIndex = Math.min(deviceList.count - 1, deviceList.currentIndex + 1)
+        onActivated: deviceList.select(Math.min(deviceList.count - 1, deviceList.currentIndex + 1))
     }
     Shortcut {
         sequence: "Return"
@@ -146,8 +146,8 @@ Window {
                     elide: Text.ElideRight
                 }
                 Label {
-                    Layout.fillWidth: true
-                    text: bluetoothController.busy ? bluetoothController.status
+                    text: bluetoothController.error.length ? bluetoothController.error
+                        : bluetoothController.busy ? bluetoothController.status
                         : root.connectedCount > 0 ? "Connected and ready to use"
                         : bluetoothController.powered ? "Choose a device or scan nearby"
                         : "Turn on to discover nearby devices"
@@ -273,12 +273,31 @@ Window {
                 clip: true
                 model: bluetoothController.devices
                 currentIndex: -1
+                property string selectedAddress: ""
                 boundsBehavior: Flickable.StopAtBounds
+                function select(index) {
+                    currentIndex = index
+                    selectedAddress = index >= 0 ? bluetoothController.devices[index].address : ""
+                }
                 onCountChanged: {
                     if (count === 0)
                         currentIndex = -1
                     else if (currentIndex < 0 || currentIndex >= count)
                         currentIndex = 0
+                }
+                Connections {
+                    target: bluetoothController
+                    function onDevicesChanged() {
+                        const devices = bluetoothController.devices
+                        let index = 0
+                        for (let i = 0; i < devices.length; ++i) {
+                            if (devices[i].address === deviceList.selectedAddress) {
+                                index = i
+                                break
+                            }
+                        }
+                        deviceList.select(devices.length ? index : -1)
+                    }
                 }
 
                 delegate: Rectangle {
@@ -327,7 +346,8 @@ Window {
                             Layout.fillWidth: true
                             spacing: 8
                             Label {
-                                text: modelData.connected ? "Activate to disconnect"
+                                text: !bluetoothController.powered ? "Turn on to connect"
+                                    : modelData.connected ? "Activate to disconnect"
                                     : modelData.paired ? "Activate to connect" : "Activate to pair"
                                 color: root.muted
                                 font.pixelSize: 10
@@ -353,9 +373,9 @@ Window {
                         anchors.fill: parent
                         hoverEnabled: true
                         enabled: !bluetoothController.busy
-                        onEntered: deviceList.currentIndex = index
+                        onEntered: deviceList.select(index)
                         onClicked: {
-                            deviceList.currentIndex = index
+                            deviceList.select(index)
                             bluetoothController.activate(index)
                         }
                     }
@@ -380,7 +400,8 @@ Window {
                         width: parent.width
                         horizontalAlignment: Text.AlignHCenter
                         elide: Text.ElideRight
-                        text: bluetoothController.busy ? bluetoothController.status
+                        text: bluetoothController.error.length ? bluetoothController.error
+                            : bluetoothController.busy ? bluetoothController.status
                             : bluetoothController.powered ? "Scan to discover nearby devices"
                             : "Turn on or scan to find devices"
                         color: root.muted
@@ -397,9 +418,12 @@ Window {
             Label {
                 Layout.fillWidth: true
                 Layout.topMargin: 12
-                text: bluetoothController.status
-                color: root.muted
+                text: bluetoothController.error.length ? bluetoothController.error
+                    : bluetoothController.status
+                color: bluetoothController.error.length ? root.text : root.muted
                 font.pixelSize: 10
+                wrapMode: Text.Wrap
+                maximumLineCount: 2
                 elide: Text.ElideRight
             }
         }

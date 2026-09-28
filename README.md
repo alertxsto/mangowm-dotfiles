@@ -299,14 +299,20 @@ Reading the daemon-maintained file avoids repeatedly starting Python via
 
 `network-popup` is a Qt Quick Wi-Fi frontend backed by `nmcli`.
 
-- Scans and sorts access points by connection state and signal strength.
-- Connects to open or secured networks.
+- Shows the active access point from NetworkManager's in-use marker, even when
+  its saved connection profile has a different name.
+- Tracks radio and connection changes made outside the popup; refreshes the list
+  without freezing the window, and reports failed operations instead of closing.
+- Connects to open or secured networks, disconnects, and turns Wi-Fi off or on.
 - Opens `nmtui` for advanced configuration.
 
 `bluetooth-popup` is a matching frontend backed by `bluetoothctl`.
 
 - Powers Bluetooth on or off and scans for nearby devices.
 - Pairs, trusts, connects, disconnects, and forgets devices.
+- Updates paired/connected state after external BlueZ changes without blocking
+  the window; keeps paired devices visible when the adapter is off.
+- Verifies requested changes and displays errors when BlueZ rejects them.
 
 Launch either popup from its Waybar module. Clicking the same module again, pressing
 Escape, or moving focus away closes it.

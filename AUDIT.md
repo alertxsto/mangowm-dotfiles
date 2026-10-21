@@ -31,7 +31,7 @@ Mango session startup order:
 | Bar | Waybar with nine custom Mango tag modules and switchable bar/dock profiles |
 | Notifications | SwayNC |
 | Launcher | Rofi |
-| Terminal and shell | Kitty, Fish, Starship, Fastfetch |
+| Terminal and shell | Kitty (default), Foot, Fish, Starship, Fastfetch |
 | File manager | Dolphin |
 | Wallpaper | swaybg plus a custom floating Qt gallery |
 | Palette | Curated named light/dark themes |
@@ -44,7 +44,7 @@ Mango session startup order:
 
 `theme-wallpaper` derives a curated theme and dark/light variant from
 `~/Pictures/Wallpapers/<Theme>/<Variant>/`. The named renderer writes Mango,
-Waybar, SwayNC, Rofi, Kitty, btop, and LazyVim palettes from one semantic color
+Waybar, SwayNC, Rofi, Kitty, Foot, btop, and LazyVim palettes from one semantic color
 definition. Wallpapers outside that hierarchy use Material Dark.
 `sync-desktop-colors` then writes:
 

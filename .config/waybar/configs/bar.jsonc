@@ -171,6 +171,7 @@
     "on-click-right": "kitty --class network-config -e nmtui"
   },
   "battery": {
+    "on-click": "$HOME/.local/bin/toggle-popup battery-popup",
     "states": {"warning": 20, "critical": 10},
     "format": "{icon} {capacity}%",
     "format-charging": "󰂄 {capacity}%",

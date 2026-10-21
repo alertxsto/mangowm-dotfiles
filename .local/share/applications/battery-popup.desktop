@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Battery
+Comment=Battery status and device information
+Exec="__HOME__/.local/bin/battery-popup"
+Icon=battery
+Terminal=false
+NoDisplay=true
+Categories=System;Monitor;

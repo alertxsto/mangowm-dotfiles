@@ -57,7 +57,7 @@ This repository is an audited snapshot of the active desktop—not a loose colle
 | Login / session | SDDM / Wayland |
 | Compositor | MangoWM |
 | Bar / notifications | Waybar / SwayNC |
-| Launcher / terminal | Rofi / Kitty |
+| Launcher / terminal | Rofi / Kitty (default), Foot |
 | Shell / prompt | Fish / Starship |
 | Wallpaper / colors | Custom Qt gallery / curated named palettes |
 | Audio / network | PipeWire + WirePlumber / NetworkManager |
@@ -65,9 +65,9 @@ This repository is an audited snapshot of the active desktop—not a loose colle
 
 ## Highlights
 
-- **One-command recoloring.** Named wallpaper folders apply curated palettes to MangoWM, Waybar, SwayNC, Rofi, Kitty, btop, LazyVim, Fish, Starship, Fastfetch, KDE, GTK, and Breeze folder icons; ungrouped wallpapers use Material Dark.
+- **One-command recoloring.** Named wallpaper folders apply curated palettes to MangoWM, Waybar, SwayNC, Rofi, Kitty, Foot, btop, LazyVim, Fish, Starship, Fastfetch, KDE, GTK, and Breeze folder icons; ungrouped wallpapers use Material Dark.
 - **Consistent terminal workflow.** Rofi, btop, and Neovim open through Kitty; Neovim owns text and source-code MIME types.
-- **Purpose-built desktop tools.** Native Qt wallpaper gallery, matching Wi-Fi, Bluetooth, and TuneD profile popups, plus a volume/brightness OSD.
+- **Purpose-built desktop tools.** Native Qt wallpaper gallery, Wi-Fi, Bluetooth, TuneD profile and battery information popups, plus a volume/brightness OSD.
 - **Responsive workflow.** Nine tags, directional navigation, touchpad gestures, blur, animations, scratchpads, and a compact status bar.
 - **Selectable Waybar layouts.** Switch between a full-width bar and floating dock from the status module; the choice survives installer refreshes.
 - **Event-driven status.** Custom Mango tag indicators update from compositor IPC instead of polling through `jq`.
@@ -197,7 +197,8 @@ Identical files and matching symlinks are left in place. Re-running the installe
 │   ├── waybar/                # switchable bar/dock modules and styling
 │   ├── swaync/                # notifications and control center
 │   ├── rofi/                  # launcher
-│   ├── kitty/                 # terminal
+│   ├── kitty/                 # default terminal
+│   ├── foot/                  # alternative Wayland terminal and generated palette
 │   ├── btop/                  # generated activity monitor theme
 │   ├── nvim/                  # LazyVim setup and generated Mango palette
 │   ├── fish/                  # shell startup and generated colors
@@ -213,6 +214,7 @@ Identical files and matching symlinks are left in place. Re-running the installe
 │       ├── network-popup/     # Qt Wi-Fi popup source
 │       ├── bluetooth-popup/   # Qt Bluetooth popup source
 │       ├── tuned-popup/       # Qt TuneD profile selector source
+│       ├── battery-popup/     # Read-only Qt battery information panel
 │       ├── mango-osd/         # Qt OSD source
 │       ├── wallpaper-overview/ # Qt wallpaper gallery source
 │       ├── applications/      # terminal-first desktop launchers
@@ -229,7 +231,7 @@ Identical files and matching symlinks are left in place. Re-running the installe
 flowchart LR
     W[Wallpaper path] --> P[Theme and light/dark variant]
     P --> A[MangoWM / Waybar / SwayNC / Rofi]
-    P --> T[Kitty / btop / LazyVim]
+    P --> T[Kitty / Foot / btop / LazyVim]
     A --> S[sync-desktop-colors]
     S --> K[KDE / Dolphin / GTK]
     S --> F[Fish / Starship / Fastfetch]
@@ -259,6 +261,27 @@ GTK uses portable Adwaita styling with the generated GTK3/GTK4 color overrides;
 Qt applications use the generated KDE color scheme instead of Artix-only
 `qt5ct`/`qt6ct` theme files. The Waybar launcher and Fastfetch banner use
 Mango branding on all three distributions.
+
+### Foot terminal
+
+Foot is installed alongside Kitty; the default terminal, application launchers,
+and `Super+Return` binding remain on Kitty. Run `foot` to open the alternative.
+
+`~/.config/foot/foot.ini` uses Fish, JetBrainsMono Nerd Font at 11 pt, 8 px
+padding, a silent bell, and 75% background opacity. It includes the generated
+`~/.config/foot/colors.ini`, which supplies the active light/dark theme, ANSI
+colors, cursor, selection, and URL colors. The tracked palette is a fallback
+for use before the first wallpaper selection.
+
+Fish selects the Sixel logo renderer for Fastfetch when `$TERM` starts with
+`foot`; other terminals keep the configured Kitty renderer. This applies to
+both the startup banner and interactive `fastfetch` commands and survives
+theme regeneration. Open a new Foot window, or run
+`source ~/.config/fish/config.fish`, to load this terminal-specific setting.
+
+`theme-wallpaper` regenerates the Foot palette with the other terminal colors.
+Open a new Foot window after changing themes; existing windows do not reload
+the generated configuration. Terminal selection is not part of the installer.
 
 ### Cursor theme
 
@@ -328,6 +351,39 @@ Reading the daemon-maintained file avoids repeatedly starting Python via
 
 Launch either popup from its Waybar module. Clicking the same module again, pressing
 Escape, or moving focus away closes it.
+
+### Battery information
+
+Click the Waybar battery indicator to open `battery-popup`. The native Qt Quick
+panel uses English labels and the active generated palette, with a Graphite
+fallback. It shows charge level, charging/discharging state, approximate time,
+power, full/design capacity ratio, and firmware-reported charge cycles.
+
+Expand **Battery details** for design/full capacity, voltage, temperature,
+manufacturer, model, technology, and charge thresholds. Details scroll within a
+400 × 536 px viewport; the header and close controls remain visible. The viewport
+shrinks on shorter screens. This is a read-only panel, not a charging-limit or
+TuneD profile editor.
+
+- Reads the selected system battery and charger state directly from sysfs; no
+  shell commands, UPower dependency, or new background service.
+- Refreshes once on opening and approximately every 15 seconds while open,
+  using a coarse timer. Close/reopen for an immediate refresh after a change.
+- Uses the software Qt Quick renderer, without compositor blur, shadows,
+  animations, or a continuous render loop. Detail items are created only when
+  expanded; unchanged values do not notify QML bindings.
+- Clicking the battery indicator again, Escape, the close button, or moving
+  focus away exits the process. No battery-popup process remains when closed.
+- Missing data is marked unavailable, not zero. Health ratios above 100% are
+  preserved and explained, not treated as a cell-health diagnosis. Energy and
+  charge units are never mixed; charge-only devices can estimate time without
+  inventing Wh capacities.
+
+The installer builds the popup alongside the other native tools. Backend
+regression coverage lives in
+`.local/share/battery-popup/tests/batterycontroller-tests.pro`; build it with
+`qmake6` and `make` in a separate temporary directory, then run
+`./batterycontroller-test`.
 
 ### TuneD power profiles
 

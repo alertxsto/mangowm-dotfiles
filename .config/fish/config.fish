@@ -10,6 +10,11 @@ set -gx MANPAGER "sh -c 'col -bx | bat -l man -p'"
 if status is-interactive
     set -g fish_greeting
 
+    # Foot supports Sixel rather than the configured Kitty graphics protocol.
+    if string match -q 'foot*' -- $TERM
+        alias fastfetch 'command fastfetch --logo-type sixel'
+    end
+
     # One clean Ryoku-style dossier per terminal, never in nested Fish shells.
     if not set -q __MANGO_FASTFETCH_SHOWN
         set -gx __MANGO_FASTFETCH_SHOWN 1

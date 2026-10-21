@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 applications_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}"
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database "$applications_dir"
 fi
@@ -14,12 +15,13 @@ mime_types=(
   application/json application/toml application/x-shellscript application/x-yaml
 )
 
+# Register Mango's defaults through the freedesktop backend, even when this
+# helper is launched from a KDE session with a different Qt runtime.
 for mime_type in "${mime_types[@]}"; do
-  xdg-mime default nvim.desktop "$mime_type"
+  env -u KDE_SESSION_VERSION XDG_CURRENT_DESKTOP=X-Generic xdg-mime default nvim.desktop "$mime_type"
 done
-xdg-mime default kitty.desktop x-scheme-handler/terminal
+env -u KDE_SESSION_VERSION XDG_CURRENT_DESKTOP=X-Generic xdg-mime default kitty.desktop x-scheme-handler/terminal
 
-mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}"
 printf 'kitty.desktop\n' > "${XDG_CONFIG_HOME:-$HOME/.config}/xdg-terminals.list"
 
 if command -v kwriteconfig6 >/dev/null 2>&1; then

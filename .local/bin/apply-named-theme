@@ -150,6 +150,27 @@ def kitty(c: dict[str, str], theme: str, variant: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def foot(c: dict[str, str], theme: str, variant: str) -> str:
+    regular = ("background", "red", "green", "yellow", "blue", "magenta", "cyan", "foreground")
+    bright = ("border", "bright_red", "bright_green", "bright_yellow", "bright_blue", "bright_magenta", "bright_cyan", "bright_foreground")
+    lines = [
+        f"# Generated from named theme {theme}/{variant}.",
+        "[main]",
+        f"initial-color-theme={variant}",
+        "",
+        f"[colors-{variant}]",
+        f"background={c['background'][1:]}",
+        f"foreground={c['foreground'][1:]}",
+        f"cursor={c['background'][1:]} {c['bright_foreground'][1:]}",
+        f"selection-background={c['selection'][1:]}",
+        f"selection-foreground={c['selection_fg'][1:]}",
+        f"urls={c['cyan'][1:]}",
+    ]
+    lines.extend(f"regular{index}={c[key][1:]}" for index, key in enumerate(regular))
+    lines.extend(f"bright{index}={c[key][1:]}" for index, key in enumerate(bright))
+    return "\n".join(lines) + "\n"
+
+
 def mango(c: dict[str, str], theme: str, variant: str) -> str:
     def rgba(value: str, alpha: str = "ff") -> str:
         return f"0x{value[1:]}{alpha}"
@@ -184,6 +205,7 @@ def main() -> None:
     atomic_write(HOME / ".config/swaync/colors.css", css)
     atomic_write(HOME / ".config/mango/colors.conf", mango(c, theme, variant))
     atomic_write(HOME / ".config/kitty/colors.conf", kitty(c, theme, variant))
+    atomic_write(HOME / ".config/foot/colors.ini", foot(c, theme, variant))
     atomic_write(HOME / ".config/btop/themes/mango.theme", btop(c, theme, variant))
     atomic_write(HOME / ".config/nvim/lua/mango/palette.lua", nvim(c, theme, variant))
     STATE.mkdir(parents=True, exist_ok=True)

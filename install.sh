@@ -7,6 +7,9 @@ install_packages=1
 enable_services=1
 build_native=1
 assume_yes=0
+native_projects=(
+  network-popup bluetooth-popup tuned-popup battery-popup mango-osd wallpaper-overview
+)
 
 usage() {
   cat <<'EOF'
@@ -151,7 +154,7 @@ read_tui_key() {
 
 select_install_steps() {
   local cursor=0 screen=select term_rows=24 term_cols=80
-  local package_detail='pacman + AUR via yay' build_detail='five local Qt tools'
+  local package_detail='pacman + AUR via yay' build_detail="${#native_projects[@]} local Qt tools"
   local service_detail='systemd/OpenRC system and user units'
   local package_locked=0 build_locked=0 service_locked=0
   local package_action build_action service_action
@@ -528,8 +531,13 @@ build_native_utilities() {
   build_root="$(mktemp -d)"
   # A failed native build may leave this temporary directory for inspection.
   jobs="$(nproc)"
+  # Bound compiler memory usage on laptops; projects are built sequentially.
+  if ((jobs > 2)); then
+    jobs=2
+  fi
 
-  for project in network-popup bluetooth-popup tuned-popup mango-osd wallpaper-overview; do
+  for project in "${native_projects[@]}"; do
+    step "Building $project"
     project_dir="$build_root/$project"
     mkdir -p -- "$project_dir"
     (

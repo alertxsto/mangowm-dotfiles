@@ -16,6 +16,7 @@ findutils
 fontconfig
 fastfetch
 fish
+foot
 fzf
 gawk
 git

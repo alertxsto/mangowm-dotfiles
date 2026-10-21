@@ -293,6 +293,29 @@ bootstrap_yay() {
   rm -rf -- "$build_dir"
 }
 
+install_artix_scenefx() {
+  pacman -T 'scenefx>=0.5' &>/dev/null && return
+
+  # SceneFX is in Arch's extra repo, but may be absent from Artix.
+  # Do not use scenefx-git: its AUR recipe still targets wlroots 0.19.
+  if pacman -Sp --nodeps 'scenefx>=0.5' &>/dev/null; then
+    yay -S --needed --noconfirm 'scenefx>=0.5'
+    return
+  fi
+
+  step 'Building SceneFX 0.5 for Artix'
+  sudo pacman -S --needed --noconfirm base-devel
+  local build_dir
+  build_dir="$(mktemp -d)"
+  cp -- "$repo_dir/system/packages/scenefx/PKGBUILD" "$build_dir/PKGBUILD"
+  # Keep a failed build for inspection, as with the other local builds.
+  (
+    cd -- "$build_dir"
+    makepkg --syncdeps --install --needed --noconfirm
+  )
+  rm -rf -- "$build_dir"
+}
+
 install_system_packages() {
   command -v pacman >/dev/null || die 'this installer requires pacman to install packages'
 
@@ -315,18 +338,8 @@ install_system_packages() {
     esac
   done < "$repo_dir/packages.txt"
 
-  # Artix's OpenRC package also has to go; on systemd replace
-  # power-profiles-daemon with tuned-ppd in one transaction so dependents
-  # of the virtual power-profiles-daemon provider remain installed.
   if [[ "$distro_id" == artix ]]; then
-    local -a conflicting_packages=()
-    pacman -Qq power-profiles-daemon &>/dev/null &&
-      conflicting_packages+=(power-profiles-daemon)
-    pacman -Qq power-profiles-daemon-openrc &>/dev/null &&
-      conflicting_packages+=(power-profiles-daemon-openrc)
-    if ((${#conflicting_packages[@]})); then
-      sudo pacman -Rns --noconfirm "${conflicting_packages[@]}"
-    fi
+    install_artix_scenefx
   fi
 
   local -a packages=("${repo_packages[@]}")
@@ -335,13 +348,21 @@ install_system_packages() {
   fi
   packages+=("${aur_packages[@]}")
   local -a install_flags=(--needed --noconfirm)
-  if [[ "$distro_id" != artix ]] && pacman -Qq power-profiles-daemon &>/dev/null; then
+  if [[ "$(pacman -Qq power-profiles-daemon 2>/dev/null || true)" == power-profiles-daemon ]]; then
     # pacman's --noconfirm declines conflict removal, so ask the user to
     # approve replacing the daemon while preserving its dependents.
     install_flags=(--needed)
     printf 'Approve replacing power-profiles-daemon with tuned-ppd when prompted.\n'
   fi
   yay -S "${install_flags[@]}" "${packages[@]}"
+
+  # tuned-ppd provides power-profiles-daemon, so the old OpenRC wrapper's
+  # dependency stays satisfied during replacement. Remove only the wrapper
+  # after installation succeeds; never remove the old daemon in advance.
+  if [[ "$distro_id" == artix ]] &&
+    [[ "$(pacman -Qq power-profiles-daemon-openrc 2>/dev/null || true)" == power-profiles-daemon-openrc ]]; then
+    sudo pacman -R --noconfirm power-profiles-daemon-openrc
+  fi
 }
 
 if ((install_packages)); then

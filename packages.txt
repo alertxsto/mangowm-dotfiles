@@ -84,5 +84,7 @@ tuned-openrc
 sddm-openrc
 dbus-openrc
 pipewire-openrc
+pipewire-pulse-openrc
+wireplumber-openrc
 elogind-openrc
 bluez-openrc

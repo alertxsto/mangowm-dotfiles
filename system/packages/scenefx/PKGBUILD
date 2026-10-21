@@ -1,0 +1,30 @@
+# Based on the Arch Linux SceneFX package by Robin Candau:
+# https://gitlab.archlinux.org/archlinux/packaging/packages/scenefx
+pkgname=scenefx
+pkgver=0.5
+pkgrel=1
+pkgdesc='Wlroots scene API with eye-candy effects'
+arch=('x86_64')
+url='https://github.com/wlrfx/scenefx'
+license=('MIT')
+depends=('glibc' 'lcms2' 'libdrm' 'libglvnd' 'libxkbcommon' 'mesa' 'pixman' 'wayland' 'wlroots0.20')
+makedepends=('glslang' 'meson' 'ninja' 'wayland-protocols')
+provides=('libscenefx-0.5.so')
+source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/${pkgver}.tar.gz")
+sha256sums=('0fa8ecca0e310f813efd052624c5ed7d9153d6a0fdead5cc957d34c07f9a86c6')
+
+build() {
+  meson setup "${pkgname}-${pkgver}" build \
+    --prefix=/usr --libdir=lib --buildtype=plain --wrap-mode=nodownload \
+    -Db_lto=true -Dexamples=false -Dwerror=false
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "${pkgdir}"
+  install -Dm644 "${pkgname}-${pkgver}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

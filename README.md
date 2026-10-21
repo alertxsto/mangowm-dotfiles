@@ -99,9 +99,16 @@ locked; a custom `--target-home` disables login services. The full supplied
 wordmark needs a terminal at least 118 columns wide and 26 rows high;
 smaller terminals get a compact label. Colors are disabled with `NO_COLOR=1`.
 
-If `power-profiles-daemon` is already installed on Arch/CachyOS, approve the
-interactive `yay` prompt to replace it with `tuned-ppd`; the same transaction
-preserves packages depending on the power-profiles provider.
+On Artix, the installer first ensures SceneFX 0.5 is available for MangoWM's
+wlroots 0.20 dependency. If the enabled Artix repositories do not provide it,
+the bundled [`PKGBUILD`](system/packages/scenefx/PKGBUILD) builds the
+checksum-verified upstream release as the regular user and installs it through
+pacman. No Arch repositories or unmanaged `/usr/local` libraries are added.
+
+If `power-profiles-daemon` is already installed, approve the interactive `yay`
+prompt to replace it with `tuned-ppd` in the same transaction. The old daemon
+is never removed in advance. On Artix, its obsolete OpenRC wrapper is removed
+only after package installation succeeds, without recursively removing dependencies.
 
 After installation:
 
@@ -150,7 +157,7 @@ prompt, run that package step in an interactive terminal.
 
 1. Identifies supported systems by `/etc/os-release` ID (`arch`, `cachyos`, or `artix`) for package and service setup.
 2. Bootstraps `yay` when necessary.
-3. Installs repository and AUR dependencies listed in [`packages.txt`](packages.txt).
+3. Ensures SceneFX 0.5 on Artix, then installs repository and AUR dependencies listed in [`packages.txt`](packages.txt).
 4. Copies the tracked home tree into the selected target home.
 5. Replaces `__HOME__` placeholders with the actual target path.
 6. Registers Kitty and Neovim as desktop defaults and restores the selected Waybar layout.
@@ -165,6 +172,11 @@ enables the user `pipewire.socket`, `pipewire-pulse.socket`, and
 services and user D-Bus/PipeWire/WirePlumber services. Mango exports Wayland
 and Qt session variables to D-Bus and, on systemd hosts, the user service
 manager before launching desktop applications.
+
+Artix installs `dbus-openrc`, `pipewire-openrc`, `pipewire-pulse-openrc`, and
+`wireplumber-openrc` explicitly so every requested user service is available.
+Application defaults are registered in the target XDG config directory without
+inheriting the calling desktop's KDE runtime selection.
 
 ### Existing-file safety
 

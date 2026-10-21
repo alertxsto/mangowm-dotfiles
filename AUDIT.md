@@ -72,15 +72,19 @@ The repository contains source and qmake projects for:
 - The live system uses Wi-Fi interface `wlan0`. The installer detects the first NetworkManager Wi-Fi interface and rewrites the installed Waybar and popup source before compilation.
 - The live system uses backlight device `amdgpu_bl2`. The installer detects `/sys/class/backlight` and rewrites the installed brightness helper.
 - Palette generation is implemented with Python's standard library and has no external theme-generator dependency.
+- MangoWM requires SceneFX 0.5 with wlroots 0.20. On Artix, the installer uses an installed/repository provider or builds the checksum-pinned release from `system/packages/scenefx/PKGBUILD`; it does not mix in Arch repositories or use the older AUR `scenefx-git` recipe.
+- `power-profiles-daemon` is replaced by `tuned-ppd` in one package transaction. Its Artix OpenRC wrapper is removed only after installation succeeds, without recursive dependency removal.
 - The curated `Pictures/Wallpapers` gallery and `Pictures/blinders.jpg` are committed and seeded by the installer without replacing existing images. The fallback palette remains usable if all images are absent.
 - Originally, package/service automation targeted only Artix with OpenRC; it now selects Artix/OpenRC or Arch/CachyOS/systemd, with `--skip-packages --skip-services` available for config-only installation elsewhere. Mango exports the session environment to D-Bus and to the systemd user manager where present.
+- Artix's `pipewire-pulse` and `wireplumber` user services are separate from `pipewire-openrc`; all three packages are listed explicitly.
+- `sync-default-apps` creates the target config directory before registering MIME defaults and isolates `xdg-mime` from inherited KDE runtime variables.
 
 ## Tracked configuration coverage
 
 Tracked session-relevant state includes:
 
 - Bash and Fish startup;
-- Mango, Waybar, SwayNC, Rofi, Kitty, btop, and LazyVim;
+- Mango, Waybar, SwayNC, Rofi, Kitty, Foot, btop, and LazyVim;
 - Starship and Fastfetch, including the Fastfetch image;
 - GTK2/3/4 compatibility, KDE globals, Dolphin, cursor/input, Qt compatibility, and xsettingsd;
 - a single cursor declaration in the Mango config, fanned out to dconf, GTK2/3/4, Qt, and XSettings by `sync-cursor`;

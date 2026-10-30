@@ -2,8 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Window
+import "../popup-ui" as PopupUi
 
-Window {
+PopupUi.PopupWindow {
     id: root
     objectName: "batteryWindow"
     title: "battery-popup"
@@ -59,8 +60,7 @@ Window {
         return "Status unavailable"
     }
 
-    Component.onCompleted: Qt.callLater(root.requestActivate)
-    onClosing: Qt.quit()
+    Component.onCompleted: activationTimer.start()
     onActiveChanged: {
         if (active) {
             everActive = true
@@ -71,12 +71,27 @@ Window {
     }
 
     Timer {
-        id: dismissTimer
-        interval: 160
-        onTriggered: if (!root.active) root.close()
+        id: activationTimer
+        interval: 180
+        onTriggered: if (!root.everActive && !root.dismissing) root.requestActivate()
     }
 
-    Shortcut { sequence: "Escape"; onActivated: root.close() }
+    Timer {
+        id: dismissTimer
+        interval: 80
+        onTriggered: if (!root.active) root.dismiss()
+    }
+
+    Shortcut { sequence: "Escape"; onActivated: root.dismiss() }
+
+    NumberAnimation {
+        id: detailScroll
+        target: scroll.contentItem
+        property: "contentY"
+        duration: 160
+        easing.type: Easing.OutCubic
+        onFinished: detailsButton.revealPending = false
+    }
 
     component Copy: Text {
         color: root.foreground
@@ -152,13 +167,15 @@ Window {
         Layout.fillWidth: true
         Copy {
             Layout.fillWidth: true
+            Layout.preferredWidth: 1
             text: detail.label
             font.pixelSize: 11
             color: root.muted
             wrapMode: Text.Wrap
         }
         Copy {
-            Layout.maximumWidth: body.width * 0.56
+            Layout.fillWidth: true
+            Layout.preferredWidth: 1
             text: detail.value
             font.pixelSize: 11
             horizontalAlignment: Text.AlignRight
@@ -211,7 +228,7 @@ Window {
                 implicitWidth: 28
                 implicitHeight: 28
                 hoverEnabled: true
-                onClicked: root.close()
+                onClicked: root.dismiss()
                 contentItem: Copy {
                     text: "×"
                     font.pixelSize: 23
@@ -241,6 +258,13 @@ Window {
         contentWidth: availableWidth
         ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
         ScrollBar.vertical.policy: contentHeight > height ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
+        function revealDetails() {
+            if (!detailsButton.revealPending)
+                return
+            detailScroll.to = Math.max(0, Math.min(detailsButton.y - 8, contentHeight - height))
+            detailScroll.restart()
+        }
+        onContentHeightChanged: revealDetails()
 
         ColumnLayout {
             id: body
@@ -408,7 +432,7 @@ Window {
             RowLayout {
                 Layout.fillWidth: true
                 Layout.topMargin: 18
-                Layout.bottomMargin: 17
+                Layout.bottomMargin: 12
                 spacing: 10
                 Copy {
                     Layout.fillWidth: true
@@ -423,60 +447,96 @@ Window {
                     font.pixelSize: 10
                 }
             }
-            Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: root.outline }
 
             ToolButton {
                 id: detailsButton
                 objectName: "detailsButton"
+                property bool revealPending: false
                 Layout.fillWidth: true
-                implicitHeight: 48
-                padding: 0
+                Layout.bottomMargin: 8
+                implicitHeight: 46
+                padding: 12
+                hoverEnabled: true
                 checkable: true
                 Accessible.name: "Battery details"
                 Accessible.description: root.detailsExpanded ? "Expanded" : "Collapsed"
+                onToggled: {
+                    detailScroll.stop()
+                    revealPending = checked
+                }
                 contentItem: RowLayout {
-                    Copy { Layout.fillWidth: true; text: "Battery details"; font.pixelSize: 12 }
-                    Copy { text: root.detailsExpanded ? "−" : "+"; color: root.muted; font.pixelSize: 18 }
+                    Copy {
+                        Layout.fillWidth: true
+                        text: "Battery details"
+                        font.pixelSize: 12
+                        Accessible.ignored: true
+                    }
+                    Icon {
+                        text: root.detailsExpanded ? "󰅃" : "󰅀"
+                        font.pixelSize: 17
+                        color: root.muted
+                    }
                 }
                 background: Rectangle {
-                    color: "transparent"
-                    radius: 5
-                    border.width: detailsButton.activeFocus ? 1 : 0
-                    border.color: root.accent
+                    color: detailsButton.checked || detailsButton.hovered ? root.raisedHigh : root.raised
+                    radius: 9
+                    border.width: 1
+                    border.color: detailsButton.activeFocus ? root.accent : root.outline
                 }
             }
 
             Loader {
                 Layout.fillWidth: true
+                Layout.bottomMargin: active ? 12 : 0
                 active: root.detailsExpanded
                 visible: active
-                sourceComponent: ColumnLayout {
-                    spacing: 11
-                    Detail { label: "Design capacity"; value: root.numeric(batteryController.designEnergy, 2, " Wh") }
-                    Detail { label: "Full-charge capacity"; value: root.numeric(batteryController.fullEnergy, 2, " Wh") }
-                    Detail { label: "Voltage"; value: root.numeric(batteryController.voltage, 2, " V") }
-                    Detail {
-                        label: "Temperature"
-                        value: batteryController.temperature > -273.15 ? batteryController.temperature.toLocaleString(root.numberLocale, 'f', 1) + " °C" : "Unavailable"
-                    }
-                    Detail { label: "Manufacturer"; value: batteryController.manufacturer || "Unavailable" }
-                    Detail { label: "Model"; value: batteryController.model || "Unavailable" }
-                    Detail { label: "Technology"; value: batteryController.technology || "Unavailable" }
-                    Detail {
-                        label: "Charge thresholds"
-                        value: batteryController.chargeEnd >= 0
-                               ? (batteryController.chargeStart >= 0 ? root.numeric(batteryController.chargeStart, 0, "%") + " → " : "Up to ") + root.numeric(batteryController.chargeEnd, 0, "%")
-                               : "Unavailable"
-                    }
-                    Copy {
-                        Layout.fillWidth: true
-                        Layout.topMargin: 2
-                        Layout.bottomMargin: 17
-                        text: "Read-only. Temperature and charge thresholds are shown only when reported by the device."
-                        color: root.muted
-                        font.pixelSize: 10
-                        wrapMode: Text.Wrap
-                        lineHeight: 1.35
+                onLoaded: {
+                    detailsButton.revealPending = true
+                    Qt.callLater(scroll.revealDetails)
+                }
+                sourceComponent: Rectangle {
+                    color: root.raised
+                    radius: 10
+                    border.color: root.outline
+                    implicitHeight: detailRows.implicitHeight + 28
+                    Accessible.role: Accessible.Grouping
+                    Accessible.name: "Battery details panel"
+
+                    ColumnLayout {
+                        id: detailRows
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 14
+                        spacing: 11
+
+                        Detail { label: "Design capacity"; value: root.numeric(batteryController.designEnergy, 2, " Wh") }
+                        Detail { label: "Full-charge capacity"; value: root.numeric(batteryController.fullEnergy, 2, " Wh") }
+                        Detail { label: "Voltage"; value: root.numeric(batteryController.voltage, 2, " V") }
+                        Detail {
+                            label: "Temperature"
+                            value: batteryController.temperature > -273.15 ? batteryController.temperature.toLocaleString(root.numberLocale, 'f', 1) + " °C" : "Unavailable"
+                        }
+                        Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: root.outline }
+                        Detail { label: "Manufacturer"; value: batteryController.manufacturer || "Unavailable" }
+                        Detail { label: "Model"; value: batteryController.model || "Unavailable" }
+                        Detail { label: "Technology"; value: batteryController.technology || "Unavailable" }
+                        Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: root.outline }
+                        Detail {
+                            label: "Charge thresholds"
+                            value: batteryController.chargeEnd >= 0
+                                   ? (batteryController.chargeStart >= 0 ? root.numeric(batteryController.chargeStart, 0, "%") + " → " : "Up to ") + root.numeric(batteryController.chargeEnd, 0, "%")
+                                   : "Unavailable"
+                        }
+                        Copy {
+                            Layout.fillWidth: true
+                            Layout.topMargin: 2
+                            text: "Read-only. Temperature and charge thresholds are shown only when reported by the device."
+                            color: root.muted
+                            font.pixelSize: 10
+                            wrapMode: Text.Wrap
+                            lineHeight: 1.35
+                        }
                     }
                 }
             }

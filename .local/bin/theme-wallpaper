@@ -53,5 +53,4 @@ mmsg dispatch reload_config >/dev/null 2>&1 || true
 pkill -USR2 waybar 2>/dev/null || true
 pkill -USR1 kitty 2>/dev/null || true
 pkill -USR2 btop 2>/dev/null || true
-swaync-client -R >/dev/null 2>&1 || true
-swaync-client -rs >/dev/null 2>&1 || true
+"$HOME/.local/bin/mango-notify" --reload >/dev/null 2>&1 || true

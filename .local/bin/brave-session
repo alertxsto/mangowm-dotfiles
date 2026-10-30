@@ -6,15 +6,11 @@ if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" && -S "$runtime_dir/bus" ]]; then
   export DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime_dir/bus"
 fi
 
-brave_bin=""
-for candidate in brave-beta brave-browser-beta brave-browser brave; do
-  if brave_bin="$(command -v "$candidate" 2>/dev/null)"; then
-    break
-  fi
-done
-[[ -n "$brave_bin" ]] || {
-  printf 'brave-session: no Brave executable found\n' >&2
+brave_bin="$(command -v brave-origin 2>/dev/null)" || {
+  printf 'brave-session: brave-origin not found; install brave-origin-bin\n' >&2
   exit 127
 }
 
+# Match the KDE palette selected by theme-wallpaper, including older login sessions.
+export QT_QPA_PLATFORMTHEME=kde
 exec "$brave_bin" "$@"

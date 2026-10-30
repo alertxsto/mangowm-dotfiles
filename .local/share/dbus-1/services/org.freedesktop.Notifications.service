@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=org.freedesktop.Notifications
+Exec="__HOME__/.local/bin/mango-notify" --daemon

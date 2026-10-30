@@ -2,8 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Window
+import "../popup-ui" as PopupUi
 
-Window {
+PopupUi.PopupWindow {
     id: root
     width: 420
     height: 510
@@ -12,7 +13,7 @@ Window {
     visible: true
     color: "transparent"
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
-    title: "tuned-popup"
+    title: "Power profiles"
 
     property color primary: themeColors.primary
     property color onPrimary: themeColors.onPrimary
@@ -37,10 +38,10 @@ Window {
         if (active) everActive = true
         else if (everActive && visible) closeTimer.restart()
     }
-    Timer { id: activationTimer; interval: 180; onTriggered: root.requestActivate() }
-    Timer { id: closeTimer; interval: 300; onTriggered: if (!root.active) Qt.quit() }
+    Timer { id: activationTimer; interval: 180; onTriggered: if (!root.everActive && !root.dismissing) root.requestActivate() }
+    Timer { id: closeTimer; interval: 80; onTriggered: if (!root.active) root.dismiss() }
 
-    Shortcut { sequence: "Esc"; onActivated: Qt.quit() }
+    Shortcut { sequence: "Esc"; onActivated: root.dismiss() }
     Shortcut {
         sequence: "Up"
         enabled: profileList.count > 0
@@ -53,13 +54,13 @@ Window {
     }
     Shortcut {
         sequence: "Return"
-        enabled: profileList.currentIndex >= 0 && !tunedController.busy
-        onActivated: tunedController.activate(profileList.currentIndex)
+        enabled: profileList.currentIndex >= 0 && !ppdController.busy
+        onActivated: ppdController.activate(profileList.currentIndex)
     }
     Shortcut {
         sequence: "Enter"
-        enabled: profileList.currentIndex >= 0 && !tunedController.busy
-        onActivated: tunedController.activate(profileList.currentIndex)
+        enabled: profileList.currentIndex >= 0 && !ppdController.busy
+        onActivated: ppdController.activate(profileList.currentIndex)
     }
 
     Rectangle {
@@ -80,7 +81,7 @@ Window {
                 spacing: 8
 
                 Label {
-                    text: "TUNED / POWER"
+                    text: "POWER MANAGEMENT"
                     color: root.muted
                     font.pixelSize: 10
                     font.weight: Font.DemiBold
@@ -115,8 +116,8 @@ Window {
             Label {
                 Layout.fillWidth: true
                 Layout.topMargin: 5
-                text: tunedController.activeProfile || "No active profile"
-                color: tunedController.activeProfile ? root.primary : root.text
+                text: ppdController.activeProfile || "No active profile"
+                color: ppdController.activeProfile ? root.primary : root.text
                 font.pixelSize: 23
                 font.weight: Font.Medium
                 elide: Text.ElideRight
@@ -144,7 +145,7 @@ Window {
                 }
                 Item { Layout.fillWidth: true }
                 Label {
-                    visible: tunedController.busy
+                    visible: ppdController.busy
                     text: "WORKING"
                     color: root.primary
                     font.pixelSize: 10
@@ -158,8 +159,8 @@ Window {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
-                opacity: tunedController.busy ? 0.65 : 1
-                model: tunedController.profiles
+                opacity: ppdController.busy ? 0.65 : 1
+                model: ppdController.profiles
                 currentIndex: count > 0 ? 0 : -1
                 highlightMoveDuration: 90
                 boundsBehavior: Flickable.StopAtBounds
@@ -168,7 +169,7 @@ Window {
                     required property var modelData
                     required property int index
                     readonly property bool selected: ListView.isCurrentItem
-                    readonly property bool isActive: modelData.name === tunedController.activeProfile
+                    readonly property bool isActive: modelData.name === ppdController.activeProfile
 
                     width: profileList.width
                     height: 64
@@ -225,9 +226,9 @@ Window {
                         id: mouse
                         anchors.fill: parent
                         hoverEnabled: true
-                        enabled: !tunedController.busy
+                        enabled: !ppdController.busy
                         onEntered: profileList.currentIndex = index
-                        onClicked: tunedController.activate(index)
+                        onClicked: ppdController.activate(index)
                     }
                 }
 
@@ -249,7 +250,7 @@ Window {
 
                     Label {
                         width: parent.width
-                        text: tunedController.busy || tunedController.status === "Updating…"
+                        text: ppdController.busy || ppdController.status === "Updating…"
                               ? "Reading profiles" : "No profiles available"
                         color: root.text
                         horizontalAlignment: Text.AlignHCenter
@@ -258,8 +259,8 @@ Window {
                     }
                     Label {
                         width: parent.width
-                        text: tunedController.busy || tunedController.status === "Updating…"
-                              ? "Checking TuneD" : "Check that TuneD is running"
+                        text: ppdController.busy || ppdController.status === "Updating…"
+                              ? "Checking power-profiles-daemon" : "Check that power-profiles-daemon is running"
                         color: root.muted
                         horizontalAlignment: Text.AlignHCenter
                         font.pixelSize: 11
@@ -287,8 +288,8 @@ Window {
                 }
                 Label {
                     Layout.fillWidth: true
-                    text: tunedController.status
-                    color: tunedController.busy ? root.primary : root.text
+                    text: ppdController.status
+                    color: ppdController.busy ? root.primary : root.text
                     font.pixelSize: 11
                     horizontalAlignment: Text.AlignRight
                     wrapMode: Text.Wrap

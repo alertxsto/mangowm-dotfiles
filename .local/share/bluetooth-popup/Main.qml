@@ -2,8 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Window
+import "../popup-ui" as PopupUi
 
-Window {
+PopupUi.PopupWindow {
     id: root
     width: 420
     height: 510
@@ -55,10 +56,10 @@ Window {
         if (active) everActive = true
         else if (everActive && visible) closeTimer.restart()
     }
-    Timer { id: activationTimer; interval: 180; onTriggered: root.requestActivate() }
-    Timer { id: closeTimer; interval: 300; onTriggered: if (!root.active) Qt.quit() }
+    Timer { id: activationTimer; interval: 180; onTriggered: if (!root.everActive && !root.dismissing) root.requestActivate() }
+    Timer { id: closeTimer; interval: 80; onTriggered: if (!root.active) root.dismiss() }
 
-    Shortcut { sequence: "Esc"; onActivated: Qt.quit() }
+    Shortcut { sequence: "Esc"; onActivated: root.dismiss() }
     Shortcut {
         sequence: "Up"
         enabled: deviceList.count > 0

@@ -2,8 +2,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Window
+import "../popup-ui" as PopupUi
 
-Window {
+PopupUi.PopupWindow {
     id: root
     width: 420
     height: 510
@@ -32,6 +33,36 @@ Window {
     palette.highlightedText: onPrimary
 
     property string passwordSsid: ""
+    property string passwordUuid: ""
+    property string detailsSsid: ""
+    property string detailsUuid: ""
+    property string detailsSecurity: ""
+    property bool confirmForget: false
+    readonly property int detailsIndex: {
+        const networks = networkController.networks
+        for (let i = 0; i < networks.length; ++i) {
+            if (detailsUuid !== "" ? networks[i].uuid === detailsUuid
+                                   : !networks[i].uuid && networks[i].ssid === detailsSsid
+                                     && networks[i].security === detailsSecurity)
+                return i
+        }
+        return -1
+    }
+    readonly property var detailsNetwork: detailsIndex >= 0
+                                          ? networkController.networks[detailsIndex] : null
+    function showDetails(network) {
+        detailsSsid = network.ssid
+        detailsUuid = network.uuid || ""
+        detailsSecurity = network.security || ""
+        confirmForget = false
+    }
+    function activateSelected() {
+        const index = networkList.currentIndex
+        const network = networkController.networks[index]
+        if (!network) return
+        if (!network.inRange && !network.active) showDetails(network)
+        else networkController.activate(index)
+    }
     property bool everActive: false
     property bool initialScanPending: true
     readonly property bool isScanning: networkController.scanning || initialScanPending
@@ -42,39 +73,51 @@ Window {
         if (active) everActive = true
         else if (everActive && visible) closeTimer.restart()
     }
-    Timer { id: activationTimer; interval: 180; onTriggered: root.requestActivate() }
-    Timer { id: closeTimer; interval: 300; onTriggered: if (!root.active) Qt.quit() }
+    Timer { id: activationTimer; interval: 180; onTriggered: if (!root.everActive && !root.dismissing) root.requestActivate() }
+    Timer { id: closeTimer; interval: 80; onTriggered: if (!root.active) root.dismiss() }
 
-    Shortcut { sequence: "Esc"; onActivated: Qt.quit() }
+    Shortcut {
+        sequence: "Esc"
+        onActivated: {
+            if (root.confirmForget) root.confirmForget = false
+            else if (root.detailsSsid !== "") root.detailsSsid = ""
+            else if (root.passwordSsid !== "") {
+                password.clear()
+                root.passwordSsid = ""
+            } else root.dismiss()
+        }
+    }
     Shortcut {
         sequence: "Up"
-        enabled: root.passwordSsid === "" && networkList.count > 0
+        enabled: root.passwordSsid === "" && root.detailsSsid === "" && networkList.count > 0
         onActivated: networkList.currentIndex = Math.max(0, networkList.currentIndex - 1)
     }
     Shortcut {
         sequence: "Down"
-        enabled: root.passwordSsid === "" && networkList.count > 0
+        enabled: root.passwordSsid === "" && root.detailsSsid === "" && networkList.count > 0
         onActivated: networkList.currentIndex = Math.min(networkList.count - 1, networkList.currentIndex + 1)
     }
     Shortcut {
         sequence: "Return"
-        enabled: root.passwordSsid === "" && !networkController.busy && networkList.currentIndex >= 0 && networkList.currentIndex < networkList.count
-        onActivated: networkController.activate(networkList.currentIndex)
+        enabled: root.passwordSsid === "" && root.detailsSsid === "" && !networkController.busy && networkList.currentIndex >= 0 && networkList.currentIndex < networkList.count
+        onActivated: root.activateSelected()
     }
     Shortcut {
         sequence: "Enter"
-        enabled: root.passwordSsid === "" && !networkController.busy && networkList.currentIndex >= 0 && networkList.currentIndex < networkList.count
-        onActivated: networkController.activate(networkList.currentIndex)
+        enabled: root.passwordSsid === "" && root.detailsSsid === "" && !networkController.busy && networkList.currentIndex >= 0 && networkList.currentIndex < networkList.count
+        onActivated: root.activateSelected()
     }
 
     Connections {
         target: networkController
+        function onDismissRequested() { root.dismiss() }
         function onScanningChanged() {
             if (!networkController.scanning)
                 root.initialScanPending = false
         }
-        function onPasswordRequested(ssid) {
+        function onPasswordRequested(ssid, uuid) {
             root.passwordSsid = ssid
+            root.passwordUuid = uuid
             password.clear()
             password.forceActiveFocus()
         }
@@ -219,7 +262,7 @@ Window {
                 Layout.topMargin: 25
                 Layout.bottomMargin: 9
                 Label {
-                    text: "AVAILABLE NETWORKS"
+                    text: "NETWORKS  /  SAVED & AVAILABLE"
                     color: root.muted
                     font.pixelSize: 10
                     font.weight: Font.DemiBold
@@ -227,8 +270,7 @@ Window {
                 }
                 Item { Layout.fillWidth: true }
                 Label {
-                    text: !networkController.wifiEnabled ? "OFFLINE"
-                          : (root.isScanning ? "SEARCHING" : networkList.count + " FOUND")
+                    text: root.isScanning ? "SEARCHING" : networkList.count + " SHOWN"
                     color: root.muted
                     font.pixelSize: 10
                     font.weight: Font.DemiBold
@@ -274,6 +316,7 @@ Window {
                             color: root.outline
                         }
                         RowLayout {
+                            z: 1
                             anchors.fill: parent
                             anchors.leftMargin: 12
                             anchors.rightMargin: 11
@@ -284,14 +327,17 @@ Window {
                                 spacing: 3
                                 Label {
                                     Layout.fillWidth: true
-                                    text: modelData.ssid
+                                    text: modelData.saved
+                                          ? modelData.ssid + "  /  " + (modelData.name || "Saved") + "  /  " + modelData.uuid
+                                          : modelData.ssid
                                     elide: Text.ElideRight
                                     color: root.text
                                     font.pixelSize: 13
                                     font.weight: Font.DemiBold
                                 }
                                 Label {
-                                    text: modelData.secured ? "SECURED" : "OPEN"
+                                    text: (modelData.saved ? "SAVED  /  " : "")
+                                          + (modelData.inRange ? (modelData.secured ? "SECURED" : "OPEN") : "OUT OF RANGE")
                                     color: root.muted
                                     font.pixelSize: 9
                                     font.weight: Font.DemiBold
@@ -312,11 +358,18 @@ Window {
                                 background: Rectangle { color: root.primary; radius: 2 }
                             }
                             Label {
-                                text: modelData.signal + "%"
+                                text: modelData.inRange ? modelData.signal + "%" : "—"
                                 color: root.muted
                                 font.pixelSize: 11
                                 horizontalAlignment: Text.AlignRight
                                 Layout.preferredWidth: 31
+                            }
+                            InstrumentButton {
+                                text: "Details"
+                                implicitHeight: 30
+                                leftPadding: 8
+                                rightPadding: 8
+                                onClicked: root.showDetails(modelData)
                             }
                         }
                         MouseArea {
@@ -324,7 +377,13 @@ Window {
                             anchors.fill: parent
                             hoverEnabled: true
                             onEntered: networkList.currentIndex = index
-                            onClicked: if (!networkController.busy) networkController.activate(index)
+                            onClicked: {
+                                networkList.currentIndex = index
+                                if (!networkController.busy && modelData.inRange)
+                                    networkController.activate(index)
+                                else if (!modelData.inRange)
+                                    root.showDetails(modelData)
+                            }
                         }
                     }
                 }
@@ -371,6 +430,157 @@ Window {
                     font.pixelSize: 9
                     font.weight: Font.DemiBold
                     font.letterSpacing: 0.3
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        visible: root.detailsSsid !== "" && root.passwordSsid === ""
+        anchors.fill: parent
+        radius: 4
+        color: root.surface
+        border.color: root.outline
+        border.width: 1
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 20
+            spacing: 0
+            Label {
+                text: root.confirmForget ? "NETWORK  /  CONFIRM" : "NETWORK  /  DETAILS"
+                color: root.muted
+                font.pixelSize: 11
+                font.weight: Font.DemiBold
+                font.letterSpacing: 1.1
+            }
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 1
+                Layout.topMargin: 16
+                color: root.primary
+            }
+            Label {
+                Layout.fillWidth: true
+                Layout.topMargin: 24
+                text: root.detailsSsid
+                elide: Text.ElideRight
+                color: root.text
+                font.pixelSize: 25
+                font.weight: Font.DemiBold
+            }
+            ColumnLayout {
+                visible: !root.confirmForget && root.detailsNetwork !== null
+                Layout.fillWidth: true
+                Layout.topMargin: 22
+                spacing: 12
+                Repeater {
+                    model: [
+                        { name: "SIGNAL", value: root.detailsNetwork && root.detailsNetwork.inRange
+                                                  ? root.detailsNetwork.signal + "%" : "Out of range" },
+                        { name: "SECURITY", value: root.detailsNetwork ? (root.detailsNetwork.security || "Unknown") : "Unknown" },
+                        { name: "PROFILE", value: root.detailsNetwork && root.detailsNetwork.saved
+                                                  ? (root.detailsNetwork.name || "Saved") + " / " + root.detailsNetwork.uuid : "Not saved" },
+                        { name: "IP ADDRESS", value: root.detailsNetwork ? (root.detailsNetwork.ipAddress || "Not available") : "Not available" },
+                        { name: "INTERFACE", value: root.detailsNetwork ? (root.detailsNetwork.interface || "Not available") : "Not available" }
+                    ]
+                    delegate: RowLayout {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        Label {
+                            text: modelData.name
+                            color: root.muted
+                            font.pixelSize: 10
+                            font.weight: Font.DemiBold
+                            font.letterSpacing: 0.8
+                            Layout.preferredWidth: 100
+                        }
+                        Label {
+                            Layout.fillWidth: true
+                            text: modelData.value
+                            color: root.text
+                            font.pixelSize: 12
+                            elide: modelData.name === "PROFILE" ? Text.ElideNone : Text.ElideRight
+                            wrapMode: modelData.name === "PROFILE" ? Text.WrapAnywhere : Text.NoWrap
+                        }
+                    }
+                }
+                Switch {
+                    visible: root.detailsNetwork && root.detailsNetwork.saved
+                    enabled: !networkController.busy && root.detailsNetwork !== null
+                    text: "Connect automatically"
+                    checked: root.detailsNetwork ? root.detailsNetwork.autoconnect : false
+                    onClicked: networkController.setAutoconnect(root.detailsUuid, checked)
+                }
+            }
+            Label {
+                visible: root.confirmForget
+                Layout.fillWidth: true
+                Layout.topMargin: 24
+                text: root.detailsNetwork && root.detailsNetwork.active
+                      ? "Forget this network? It will disconnect and its saved settings will be removed."
+                      : "Forget this saved network? Its saved connection settings will be removed."
+                wrapMode: Text.Wrap
+                color: root.text
+                font.pixelSize: 13
+            }
+            Label {
+                visible: !root.confirmForget && root.detailsNetwork === null
+                Layout.fillWidth: true
+                Layout.topMargin: 24
+                text: "This network is no longer available."
+                color: root.muted
+                font.pixelSize: 12
+            }
+            Label {
+                visible: networkController.errorMessage !== ""
+                Layout.fillWidth: true
+                Layout.topMargin: 12
+                text: networkController.errorMessage
+                color: root.primary
+                wrapMode: Text.Wrap
+                font.pixelSize: 11
+            }
+            Item { Layout.fillHeight: true }
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+                InstrumentButton {
+                    visible: !root.confirmForget && root.detailsNetwork && root.detailsNetwork.saved
+                    text: "Forget"
+                    enabled: !networkController.busy
+                    onClicked: root.confirmForget = true
+                }
+                Item { Layout.fillWidth: true }
+                InstrumentButton {
+                    text: root.confirmForget ? "Cancel" : "Back"
+                    onClicked: {
+                        if (root.confirmForget) root.confirmForget = false
+                        else root.detailsSsid = ""
+                    }
+                }
+                InstrumentButton {
+                    visible: root.confirmForget
+                    text: "Forget network"
+                    emphasized: true
+                    enabled: !networkController.busy && root.detailsNetwork !== null
+                    onClicked: {
+                        networkController.forget(root.detailsUuid)
+                        root.confirmForget = false
+                        root.detailsSsid = ""
+                    }
+                }
+                InstrumentButton {
+                    visible: !root.confirmForget && root.detailsNetwork !== null
+                    text: root.detailsNetwork && root.detailsNetwork.active ? "Disconnect" : "Connect"
+                    emphasized: true
+                    enabled: !networkController.busy && networkController.wifiEnabled
+                             && root.detailsNetwork !== null
+                             && (root.detailsNetwork.inRange || root.detailsNetwork.active)
+                    onClicked: {
+                        const index = root.detailsIndex
+                        root.detailsSsid = ""
+                        networkController.activate(index)
+                    }
                 }
             }
         }
@@ -441,7 +651,7 @@ Window {
                 selectedTextColor: root.onPrimary
                 font.pixelSize: 13
                 onAccepted: if (text.length > 0 && !networkController.busy)
-                                networkController.connectWithPassword(root.passwordSsid, text)
+                                networkController.connectWithPassword(root.passwordSsid, root.passwordUuid, text)
                 background: Rectangle {
                     color: root.raised
                     border.color: password.activeFocus ? root.primary : root.outline
@@ -476,7 +686,7 @@ Window {
                     text: "Connect"
                     emphasized: true
                     enabled: password.text.length > 0 && !networkController.busy
-                    onClicked: networkController.connectWithPassword(root.passwordSsid, password.text)
+                    onClicked: networkController.connectWithPassword(root.passwordSsid, root.passwordUuid, password.text)
                 }
             }
         }

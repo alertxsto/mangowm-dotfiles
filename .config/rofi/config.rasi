@@ -1,10 +1,19 @@
 configuration {
     modi: "drun";
     show-icons: true;
-    terminal: "kitty";
-    display-drun: "󰀻  Applications";
+    terminal: "foot";
+    display-drun: "Applications";
     drun-display-format: "{name}";
-    font: "JetBrainsMono Nerd Font 11";
+    drun-match-fields: "name";
+    matching: "normal";
+    sort: true;
+    sorting-method: "normal";
+    font: "Noto Sans 10";
     icon-theme: "Papirus-Dark";
+    threads: 2;
+    kb-row-left: "Left,Control+Page_Up";
+    kb-row-right: "Right,Control+Page_Down";
+    kb-move-char-back: "Control+b";
+    kb-move-char-forward: "Control+f";
 }
 @theme "theme"

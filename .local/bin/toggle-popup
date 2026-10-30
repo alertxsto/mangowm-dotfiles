@@ -2,12 +2,12 @@
 set -u
 
 if (($# != 1)); then
-  printf 'Usage: toggle-popup {network-popup|bluetooth-popup|tuned-popup|battery-popup}\n' >&2
+  printf 'Usage: toggle-popup {network-popup|bluetooth-popup|ppd-popup|battery-popup}\n' >&2
   exit 2
 fi
 
 case "$1" in
-  network-popup|bluetooth-popup|tuned-popup|battery-popup) popup="$1" ;;
+  network-popup|bluetooth-popup|ppd-popup|battery-popup) popup="$1" ;;
   *)
     printf 'toggle-popup: unsupported popup: %s\n' "$1" >&2
     exit 2
@@ -32,7 +32,8 @@ if [[ -r "$state_file" ]]; then
 fi
 if [[ "$pid" =~ ^[0-9]+$ && -e "/proc/$pid/exe" ]] \
     && [[ "$(readlink -f -- "/proc/$pid/exe")" == "$(readlink -f -- "$binary")" ]]; then
-  kill "$pid"
+  # Let the native single-instance socket finish the right-edge exit animation.
+  "$binary"
   rm -f -- "$state_file"
   exit 0
 fi

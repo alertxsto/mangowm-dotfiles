@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Notifications
+Comment=Open notifications and desktop controls
+Exec=env "__HOME__/.local/bin/mango-notify" --open
+Icon=preferences-system-notifications
+Terminal=false
+Categories=Utility;Settings;
+StartupNotify=false

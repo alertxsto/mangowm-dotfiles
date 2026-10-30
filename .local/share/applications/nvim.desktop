@@ -3,9 +3,9 @@ Type=Application
 Version=1.0
 Name=Neovim
 GenericName=Text Editor
-Comment=Edit text and source files in Neovim through Kitty
-TryExec=kitty
-Exec=kitty --class nvim --title Neovim -e nvim %F
+Comment=Edit text and source files in Neovim through Foot
+TryExec=foot
+Exec=foot --app-id=nvim --title=Neovim nvim %F
 Icon=nvim
 Terminal=false
 Categories=Development;

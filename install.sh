@@ -8,7 +8,7 @@ enable_services=1
 build_native=1
 assume_yes=0
 native_projects=(
-  network-popup bluetooth-popup tuned-popup battery-popup mango-osd wallpaper-overview
+  network-popup bluetooth-popup ppd-popup battery-popup mango-osd mango-notify wallpaper-overview
 )
 
 usage() {
@@ -126,11 +126,7 @@ draw_tui() {
     printf '  Packages       %s\n' "$package_action"
     printf '  Qt utilities   %s\n' "$build_action"
     printf '  Login services %s\n' "$service_action"
-    if ((term_cols >= 85)); then
-      printf '\n  %sChanging packages/services may ask for sudo; old Matugen config is removed.%s\n' "$warn" "$base"
-    else
-      printf '\n  %sSystem changes may ask for sudo; old Matugen config is removed.%s\n' "$warn" "$base"
-    fi
+    printf '\n  %sChanging packages/services may ask for sudo.%s\n' "$warn" "$base"
     printf '\n  %sy: start    e: edit selection    q: cancel%s\n' "$accent" "$base"
   fi
 }
@@ -319,6 +315,40 @@ install_artix_scenefx() {
   rm -rf -- "$build_dir"
 }
 
+disable_legacy_power_services() {
+  local service runlevel
+  for service in tuned-ppd tuned; do
+    if [[ "$distro_id" == artix ]]; then
+      if [[ -f "/etc/init.d/$service" ]]; then
+        sudo rc-service "$service" stop
+        for runlevel in /etc/runlevels/*; do
+          [[ -e "$runlevel/$service" || -L "$runlevel/$service" ]] || continue
+          sudo rc-update del "$service" "${runlevel##*/}"
+        done
+      fi
+    elif [[ -n "$(systemctl list-unit-files "$service.service" --no-legend)" ]]; then
+      sudo systemctl disable --now "$service.service"
+    fi
+  done
+}
+
+require_native_power_profiles_daemon() {
+  [[ "$(pacman -Qq power-profiles-daemon 2>/dev/null || true)" == power-profiles-daemon ]] ||
+    die 'install the genuine power-profiles-daemon package before enabling services'
+}
+
+retire_legacy_power_config() {
+  local path backup_suffix
+  backup_suffix=".pre-ppd-$(date +%Y%m%d-%H%M%S)-$$"
+  for path in /etc/init.d/tuned-ppd /etc/tuned/ppd.conf; do
+    # Preserve administrator changes; package-owned files belong to pacman.
+    if [[ -e "$path" ]] && ! pacman -Qo "$path" &>/dev/null; then
+      sudo mv -- "$path" "$path$backup_suffix"
+      printf 'Retired %s to %s\n' "$path" "$path$backup_suffix"
+    fi
+  done
+}
+
 install_system_packages() {
   command -v pacman >/dev/null || die 'this installer requires pacman to install packages'
 
@@ -351,21 +381,15 @@ install_system_packages() {
   fi
   packages+=("${aur_packages[@]}")
   local -a install_flags=(--needed --noconfirm)
-  if [[ "$(pacman -Qq power-profiles-daemon 2>/dev/null || true)" == power-profiles-daemon ]]; then
-    # pacman's --noconfirm declines conflict removal, so ask the user to
-    # approve replacing the daemon while preserving its dependents.
+  if [[ "$(pacman -Qq tuned-ppd 2>/dev/null || true)" == tuned-ppd ]]; then
+    # Replace the conflicting provider in one dependency-checked transaction.
+    # Never remove it first: desktop packages may depend on its PPD provision.
     install_flags=(--needed)
-    printf 'Approve replacing power-profiles-daemon with tuned-ppd when prompted.\n'
+    printf 'Approve replacing tuned-ppd with power-profiles-daemon when prompted.\n'
   fi
+  disable_legacy_power_services
   yay -S "${install_flags[@]}" "${packages[@]}"
-
-  # tuned-ppd provides power-profiles-daemon, so the old OpenRC wrapper's
-  # dependency stays satisfied during replacement. Remove only the wrapper
-  # after installation succeeds; never remove the old daemon in advance.
-  if [[ "$distro_id" == artix ]] &&
-    [[ "$(pacman -Qq power-profiles-daemon-openrc 2>/dev/null || true)" == power-profiles-daemon-openrc ]]; then
-    sudo pacman -R --noconfirm power-profiles-daemon-openrc
-  fi
+  require_native_power_profiles_daemon
 }
 
 if ((install_packages)); then
@@ -400,7 +424,19 @@ install_file() {
 
   temporary="$(mktemp)"
   if LC_ALL=C grep -aq '__HOME__' "$source"; then
-    escaped_home="${target_home//\\/\\\\}"
+    escaped_home="$target_home"
+    if [[ "$relative" == *.desktop ]]; then
+      # Escape both the desktop string and quoted Exec argument layers.
+      escaped_home="${target_home//\\/\\\\\\\\}"
+      escaped_home="${escaped_home//\"/\\\\\"}"
+      escaped_home="${escaped_home//\$/\\\\\$}"
+      escaped_home="${escaped_home//\`/\\\\\`}"
+      escaped_home="${escaped_home//%/%%}"
+      escaped_home="${escaped_home//$'\n'/\\n}"
+      escaped_home="${escaped_home//$'\r'/\\r}"
+      escaped_home="${escaped_home//$'\t'/\\t}"
+    fi
+    escaped_home="${escaped_home//\\/\\\\}"
     escaped_home="${escaped_home//&/\\&}"
     escaped_home="${escaped_home//|/\\|}"
     sed "s|__HOME__|$escaped_home|g" "$source" > "$temporary"
@@ -434,33 +470,79 @@ install_link() {
 }
 
 install_tree() {
-  local source_root="$1" relative_root="$2" source relative
-  while IFS= read -r -d '' source; do
-    relative="${source#"$source_root"/}"
+  local relative_root="$1" relative source
+  for relative in "${install_sources[@]}"; do
+    [[ "$relative" == "$relative_root/"* ]] || continue
+    source="$repo_dir/$relative"
     if [[ -L "$source" ]]; then
-      install_link "$source" "$relative_root/$relative"
-    else
-      install_file "$source" "$relative_root/$relative"
+      install_link "$source" "$relative"
+    elif [[ -f "$source" ]]; then
+      install_file "$source" "$relative"
     fi
-  done < <(find "$source_root" \( -type f -o -type l \) -print0)
+  done
 }
+
+# Checkouts use the index as an allowlist but install working-tree contents.
+# Distribution archives have no index and contain their distribution files.
+manifest="$(mktemp)"
+if [[ -e "$repo_dir/.git" || -L "$repo_dir/.git" ]]; then
+  command -v git >/dev/null || die 'git is required to install from a checkout'
+  git -C "$repo_dir" ls-files -z -- .config .local Pictures > "$manifest" \
+    || die 'cannot enumerate tracked checkout files'
+else
+  (cd -- "$repo_dir" && find .config .local Pictures \( -type f -o -type l \) -print0) > "$manifest"
+fi
+mapfile -d '' -t install_sources < "$manifest"
+rm -f -- "$manifest"
+for index in "${!install_sources[@]}"; do
+  install_sources[index]="${install_sources[index]#./}"
+done
 
 step 'Installing home configuration'
 install_file "$repo_dir/.bash_profile" '.bash_profile'
 install_file "$repo_dir/.bashrc" '.bashrc'
 # Make the user D-Bus address available to Mango-launched browser notifications.
 install_file "$repo_dir/.pam_environment" '.pam_environment'
-install_tree "$repo_dir/.config" '.config'
-install_tree "$repo_dir/.local" '.local'
+install_tree '.config'
+install_tree '.local'
+
+# Retire the old managed Beta launcher without touching browser profiles/packages.
+backup_destination "$target_home/.local/share/applications/brave-browser-beta.desktop" \
+  '.local/share/applications/brave-browser-beta.desktop'
+
+# Retire the former power popup instead of leaving an obsolete launcher/backend.
+for relative in .local/bin/tuned-popup .local/share/tuned-popup \
+  .local/share/applications/tuned-popup.desktop; do
+  backup_destination "$target_home/$relative" "$relative"
+done
 
 # Seed the bundled gallery without replacing wallpapers already in Pictures.
-while IFS= read -r -d '' source; do
-  relative="${source#"$repo_dir"/}"
+for relative in "${install_sources[@]}"; do
+  [[ "$relative" == Pictures/* ]] || continue
+  source="$repo_dir/$relative"
+  [[ -f "$source" && ! -L "$source" ]] || continue
   destination="$target_home/$relative"
   if [[ ! -e "$destination" && ! -L "$destination" ]]; then
     install -Dm0644 "$source" "$destination"
   fi
-done < <(find "$repo_dir/Pictures" -type f -print0)
+done
+
+# Preserve defaults in place so the helper can merge unrelated associations.
+for relative in .config/mimeapps.list .config/xdg-terminals.list; do
+  destination="$target_home/$relative"
+  if [[ -e "$destination" || -L "$destination" ]]; then
+    ensure_backup_root
+    if [[ ! -e "$backup_root/$relative" && ! -L "$backup_root/$relative" ]]; then
+      mkdir -p -- "$backup_root/$(dirname -- "$relative")"
+      if [[ -L "$destination" && -e "$destination" ]]; then
+        # Capture contents, not just a link to a file the helper may modify.
+        cp -aL -- "$destination" "$backup_root/$relative"
+      else
+        cp -a -- "$destination" "$backup_root/$relative"
+      fi
+    fi
+  fi
+done
 
 HOME="$target_home" XDG_CONFIG_HOME="$target_home/.config" \
   XDG_DATA_HOME="$target_home/.local/share" \
@@ -478,26 +560,8 @@ if [[ -r "$waybar_mode_file" ]]; then
   fi
 fi
 
-# Clean up the retired Matugen pipeline left by older installs.
-rm -rf -- "$target_home/.config/matugen"
-rm -f -- "$target_home/.config/fish/conf.d/matugen-colors.fish"
-
 adapt_hardware() {
-  local wifi_interface='' backlight_path='' backlight_device=''
-
-  if command -v nmcli >/dev/null; then
-    while IFS=: read -r device type _state; do
-      if [[ "$type" == wifi && "$device" != p2p-* ]]; then
-        wifi_interface="$device"
-        break
-      fi
-    done < <(nmcli -t -f DEVICE,TYPE,STATE device 2>/dev/null || true)
-  fi
-
-  if [[ -n "$wifi_interface" && "$wifi_interface" != wlan0 ]]; then
-    sed -i "s/\"wlan0\"/\"$wifi_interface\"/g" \
-      "$target_home/.local/share/network-popup/main.cpp"
-  fi
+  local backlight_path='' backlight_device=''
 
   for backlight_path in /sys/class/backlight/*; do
     [[ -e "$backlight_path" ]] || continue
@@ -559,18 +623,17 @@ enable_openrc_services() {
   [[ "$target_home" == "$HOME" ]] || die '--skip-services is required with a custom --target-home'
   command -v rc-update >/dev/null || die 'OpenRC rc-update is unavailable'
   command -v rc-service >/dev/null || die 'OpenRC rc-service is unavailable'
-  sudo install -Dm0755 "$repo_dir/system/openrc/tuned-ppd" /etc/init.d/tuned-ppd
-  sudo install -Dm0644 "$repo_dir/system/tuned/ppd.conf" /etc/tuned/ppd.conf
+  require_native_power_profiles_daemon
+  disable_legacy_power_services
+  retire_legacy_power_config
 
   sudo rc-update add dbus boot
   sudo rc-update add NetworkManager default
   sudo rc-update add bluetoothd default
-  sudo rc-update add tuned default
-  sudo rc-update add tuned-ppd default
+  sudo rc-update add power-profiles-daemon default
   sudo rc-update add sddm default
 
-  sudo rc-service tuned start
-  sudo rc-service tuned-ppd start
+  sudo rc-service power-profiles-daemon start
 
   rc-update --user add dbus default
   rc-update --user add pipewire default
@@ -580,11 +643,13 @@ enable_openrc_services() {
 
 enable_systemd_services() {
   command -v systemctl >/dev/null || die 'systemd systemctl is unavailable'
-  sudo install -Dm0644 "$repo_dir/system/tuned/ppd.conf" /etc/tuned/ppd.conf
+  require_native_power_profiles_daemon
+  disable_legacy_power_services
+  retire_legacy_power_config
 
   sudo systemctl enable NetworkManager.service bluetooth.service \
-    tuned.service tuned-ppd.service sddm.service
-  sudo systemctl start tuned.service tuned-ppd.service
+    power-profiles-daemon.service sddm.service
+  sudo systemctl start power-profiles-daemon.service
 
   # User units belong to the invoking account, not a root or custom-home target.
   systemctl --user enable pipewire.socket pipewire-pulse.socket wireplumber.service

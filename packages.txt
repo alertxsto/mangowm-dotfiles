@@ -25,6 +25,7 @@ grep
 kconfig
 kde-gtk-config
 kitty
+layer-shell-qt
 libnotify
 libpulse
 make
@@ -42,10 +43,10 @@ plasma-integration
 plasma-workspace
 polkit
 polkit-kde-agent
-tuned
-tuned-ppd
+power-profiles-daemon
 procps-ng
 python
+python-gobject
 qt6-base
 qt6-declarative
 qt6-imageformats
@@ -57,7 +58,6 @@ slurp
 satty
 starship
 swaybg
-swaync
 ttf-font-awesome
 ttf-jetbrains-mono-nerd
 ttf-nerd-fonts-symbols
@@ -75,13 +75,13 @@ xorg-xwayland
 xsettingsd
 
 # Common AUR packages
-brave-beta-bin
+brave-origin-bin
 bibata-cursor-theme-bin
 mangowm-git
 
 # Artix/OpenRC packages
 networkmanager-openrc
-tuned-openrc
+power-profiles-daemon-openrc
 sddm-openrc
 dbus-openrc
 pipewire-openrc

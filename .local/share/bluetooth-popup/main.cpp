@@ -589,11 +589,12 @@ private:
 };
 
 int main(int argc, char **argv) {
-    QGuiApplication app(argc, argv);
-    QGuiApplication::setDesktopFileName("bluetooth-popup");
-
+    // A toggle-close needs only the local socket, not another GUI instance.
     if (closeRunningPopup())
         return 0;
+
+    QGuiApplication app(argc, argv);
+    QGuiApplication::setDesktopFileName("bluetooth-popup");
 
     QLockFile lock(QDir::tempPath() + "/" + socketName() + ".lock");
     lock.setStaleLockTime(0);
@@ -606,15 +607,18 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    BluetoothController controller;
+    QQmlApplicationEngine engine;
+
     QLocalServer::removeServer(socketName());
     QLocalServer server;
     if (!server.listen(socketName()))
         return 1;
     QObject::connect(&server, &QLocalServer::newConnection, &app, [&] {
         while (QLocalSocket *socket = server.nextPendingConnection()) {
-            const auto handleMessage = [socket] {
+            const auto handleMessage = [socket, &engine] {
                 if (socket->readAll().contains("close"))
-                    QCoreApplication::quit();
+                    QMetaObject::invokeMethod(engine.rootObjects().constFirst(), "dismiss");
                 socket->disconnectFromServer();
             };
             QObject::connect(socket, &QLocalSocket::readyRead, socket, handleMessage);
@@ -624,8 +628,6 @@ int main(int argc, char **argv) {
         }
     });
 
-    BluetoothController controller;
-    QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("bluetoothController", &controller);
     engine.rootContext()->setContextProperty(
         "themeColors", loadPalette(QDir::homePath() + "/.config/rofi/colors.rasi"));

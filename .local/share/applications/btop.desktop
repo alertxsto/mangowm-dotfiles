@@ -3,9 +3,9 @@ Type=Application
 Version=1.0
 Name=btop++
 GenericName=System Monitor
-Comment=Monitor system resources in Kitty
-TryExec=kitty
-Exec=kitty --class btop --title btop -e btop
+Comment=Monitor system resources in Foot
+TryExec=foot
+Exec=foot --app-id=btop --title=btop btop
 Icon=btop
 Terminal=false
 Categories=System;Monitor;ConsoleOnly;

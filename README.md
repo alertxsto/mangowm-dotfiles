@@ -8,7 +8,7 @@
 
 <img src="assets/desktop.webp" alt="MangoWM desktop with Waybar, Kitty, and Fastfetch" width="100%">
 
-<sub>MangoWM · Waybar · SwayNC · Rofi · Kitty · btop · LazyVim · systemd / OpenRC</sub>
+<sub>MangoWM · Waybar · mango-notify · Rofi · Kitty · btop · LazyVim · systemd / OpenRC</sub>
 
 <br><br>
 
@@ -37,9 +37,8 @@
 
 <table>
   <tr>
-    <td width="33%"><img src="assets/wifi-popup.webp" alt="Instrument Wi-Fi popup showing its connected status and network list, with SSID redacted"><br><sub><b>Wi-Fi</b> — connection, scan, and network actions.</sub></td>
-    <td width="33%"><img src="assets/bluetooth-popup.webp" alt="Instrument Bluetooth popup with power-off empty state"><br><sub><b>Bluetooth</b> — power-off state and device controls.</sub></td>
-    <td width="33%"><img src="assets/tuned-popup.webp" alt="Instrument TuneD popup with active latency-performance profile and available profiles"><br><sub><b>TuneD</b> — active profile and available modes.</sub></td>
+    <td width="50%"><img src="assets/wifi-popup.webp" alt="Instrument Wi-Fi popup showing its connected status and network list, with SSID redacted"><br><sub><b>Wi-Fi</b> — connection, scan, and network actions.</sub></td>
+    <td width="50%"><img src="assets/bluetooth-popup.webp" alt="Instrument Bluetooth popup with power-off empty state"><br><sub><b>Bluetooth</b> — power-off state and device controls.</sub></td>
   </tr>
 </table>
 
@@ -56,8 +55,9 @@ This repository is an audited snapshot of the active desktop—not a loose colle
 | Distribution / init | Arch Linux or CachyOS / systemd; Artix Linux / OpenRC |
 | Login / session | SDDM / Wayland |
 | Compositor | MangoWM |
-| Bar / notifications | Waybar / SwayNC |
-| Launcher / terminal | Rofi / Kitty (default), Foot |
+| Bar / notifications | Waybar / mango-notify (native C++ / Qt Quick) |
+| Launcher / terminal | Rofi / Foot (default), Kitty |
+| Browser | Brave Origin (stable) |
 | Shell / prompt | Fish / Starship |
 | Wallpaper / colors | Custom Qt gallery / curated named palettes |
 | Audio / network | PipeWire + WirePlumber / NetworkManager |
@@ -65,11 +65,11 @@ This repository is an audited snapshot of the active desktop—not a loose colle
 
 ## Highlights
 
-- **One-command recoloring.** Named wallpaper folders apply curated palettes to MangoWM, Waybar, SwayNC, Rofi, Kitty, Foot, btop, LazyVim, Fish, Starship, Fastfetch, KDE, GTK, and Breeze folder icons; ungrouped wallpapers use Material Dark.
-- **Consistent terminal workflow.** Rofi, btop, and Neovim open through Kitty; Neovim owns text and source-code MIME types.
-- **Purpose-built desktop tools.** Native Qt wallpaper gallery, Wi-Fi, Bluetooth, TuneD profile and battery information popups, plus a volume/brightness OSD.
+- **One-command recoloring.** Named wallpaper folders apply curated palettes to MangoWM, Waybar, mango-notify, Rofi, Kitty, Foot, btop, LazyVim, Fish, Starship, Fastfetch, KDE, GTK, and Breeze folder icons; ungrouped wallpapers use Material Dark.
+- **Consistent terminal workflow.** Rofi, btop, and Neovim open through Foot; Neovim owns text and source-code MIME types.
+- **Purpose-built desktop tools.** Native Qt notifications and desktop controls, wallpaper gallery, Wi-Fi, Bluetooth, power-profile and battery information popups, plus a volume/brightness OSD.
 - **Responsive workflow.** Nine tags, directional navigation, touchpad gestures, blur, animations, scratchpads, and a compact status bar.
-- **Selectable Waybar layouts.** Switch between a full-width bar and floating dock from the status module; the choice survives installer refreshes.
+- **Selectable Waybar layouts.** Switch between three floating islands and a unified dock from the status module; the choice survives installer refreshes.
 - **Event-driven status.** Custom Mango tag indicators update from compositor IPC instead of polling through `jq`.
 - **Audited deployment.** The installer adapts hardware names, builds local tools from source, configures distro-appropriate services, and backs up every conflict.
 - **Repeatable installation.** Identical files and matching symlinks are left untouched, making subsequent installs idempotent.
@@ -105,10 +105,16 @@ the bundled [`PKGBUILD`](system/packages/scenefx/PKGBUILD) builds the
 checksum-verified upstream release as the regular user and installs it through
 pacman. No Arch repositories or unmanaged `/usr/local` libraries are added.
 
-If `power-profiles-daemon` is already installed, approve the interactive `yay`
-prompt to replace it with `tuned-ppd` in the same transaction. The old daemon
-is never removed in advance. On Artix, its obsolete OpenRC wrapper is removed
-only after package installation succeeds, without recursively removing dependencies.
+Power profiles use the genuine `power-profiles-daemon` package, plus
+`power-profiles-daemon-openrc` on Artix. On existing TuneD installations, the
+installer stops and disables `tuned` and `tuned-ppd` before replacing the
+conflicting `tuned-ppd` provider with PPD in one dependency-checked `yay`
+transaction. Approve that replacement prompt in an interactive terminal.
+The installer never force-removes a provider, bypasses dependency checks, or
+installs a compatibility package; if another package explicitly requires
+TuneD rather than the PPD interface, resolve that dependency before retrying.
+The old TuneD packages may remain installed but disabled; they are no longer
+desktop dependencies.
 
 After installation:
 
@@ -133,7 +139,7 @@ The installer seeds `~/Pictures/Wallpapers` and `~/Pictures/blinders.jpg` from t
 Examples:
 
 ```bash
-# Install only the configuration files
+# Install configuration and build Qt tools without package/service changes
 ./install.sh --skip-packages --skip-services
 
 # Use preselected steps without installer questions (e.g. from a script)
@@ -150,43 +156,72 @@ When `--target-home` differs from `$HOME`, use `--skip-services`; user services 
 
 Without a terminal, the installer runs the selected steps without its selection
 screen. `--yes` does the same in a terminal; neither mode answers prompts from
-`sudo` or `yay`. If an existing `power-profiles-daemon` requires a replacement
-prompt, run that package step in an interactive terminal.
+`sudo` or `yay`. Replacing an installed `tuned-ppd` requires an interactive
+package transaction. That package migration stops and disables the old power
+services even with `--skip-services`; the latter skips enabling new services.
 
 ## What `install.sh` does
 
 1. Identifies supported systems by `/etc/os-release` ID (`arch`, `cachyos`, or `artix`) for package and service setup.
 2. Bootstraps `yay` when necessary.
 3. Ensures SceneFX 0.5 on Artix, then installs repository and AUR dependencies listed in [`packages.txt`](packages.txt).
-4. Copies the tracked home tree into the selected target home.
+4. In a Git checkout, copies indexed home-tree paths using their working-tree contents; untracked files, including ignored files, are excluded. Without Git metadata, copies the distributed home tree.
 5. Replaces `__HOME__` placeholders with the actual target path.
-6. Registers Kitty and Neovim as desktop defaults and restores the selected Waybar layout.
-7. Detects the Wi-Fi interface and backlight device.
-8. Builds the Wi-Fi, Bluetooth, TuneD profile, OSD, and wallpaper utilities from source.
-9. Replaces `power-profiles-daemon` with TuneD, installs its PPD mapping, then enables the required system and user services through systemd or OpenRC.
+6. Registers Brave Origin, Foot, and Neovim as desktop defaults and restores the selected Waybar layout.
+7. Detects the backlight device. The Wi-Fi popup selects an available NetworkManager interface at runtime.
+8. Builds the Wi-Fi, Bluetooth, power-profile (`ppd-popup`), battery information, OSD, notification service, and wallpaper utilities from source. Projects build sequentially with at most two compiler jobs to limit memory pressure; QtDBus comes from `qt6-base`, with `qt6-declarative` and `libpulse` providing the notification UI and audio integration.
+9. Migrates the power backend to genuine power-profiles-daemon and enables the required system and user services through systemd or OpenRC.
 
-On Arch/CachyOS, the installer enables `NetworkManager`, `bluetooth`, `tuned`,
-`tuned-ppd`, and `sddm` as systemd system units, starts the TuneD units, and
+Installing from a Git checkout requires Git. Indexed paths use their current working-tree contents, so new files must be added to the index before a checkout installation can include them.
+
+The battery popup is included in the default Qt build; no prebuilt binary or
+additional daemon is required. Its desktop entry is installed with an absolute
+path for the selected home, and both Waybar layouts include its click action.
+Use `--skip-build` only when native utilities are already available or when
+installing configuration for inspection without runnable popup binaries.
+
+On Arch/CachyOS, the installer enables `NetworkManager`, `bluetooth`,
+`power-profiles-daemon`, and `sddm` as systemd system units, starts PPD, and
 enables the user `pipewire.socket`, `pipewire-pulse.socket`, and
 `wireplumber.service`. On Artix, it enables the corresponding OpenRC system
-services and user D-Bus/PipeWire/WirePlumber services. Mango exports Wayland
-and Qt session variables to D-Bus and, on systemd hosts, the user service
-manager before launching desktop applications.
+services (including the packaged `power-profiles-daemon` service) and user
+D-Bus/PipeWire/WirePlumber services. Before starting PPD, both init paths stop
+and disable the old TuneD services. Unowned legacy `/etc/init.d/tuned-ppd` and
+`/etc/tuned/ppd.conf` files are moved to timestamped `.pre-ppd-*` backups;
+package-owned files are left to pacman. Mango exports Wayland and Qt session
+variables to D-Bus and, on systemd hosts, the user service manager before
+launching desktop applications.
 
 Artix installs `dbus-openrc`, `pipewire-openrc`, `pipewire-pulse-openrc`, and
 `wireplumber-openrc` explicitly so every requested user service is available.
 Application defaults are registered in the target XDG config directory without
 inheriting the calling desktop's KDE runtime selection.
 
+The power popup reads PPD's `Profiles` and `ActiveProfile` properties over the
+system D-Bus API and updates when the daemon emits property changes. Waybar's
+`custom/ppd` indicator uses a long-running Python/Gio D-Bus subscription
+(`python-gobject`), not a two-second TuneD state-file poll. Clicking it opens
+`ppd-popup`; selecting a profile sets PPD's `ActiveProfile` through native
+asynchronous D-Bus, without invoking `pkexec`. The daemon's default polkit
+policy allows switching without a password in an active local desktop session.
+Only profiles reported by PPD are shown.
+
 ### Existing-file safety
 
-The installer never silently discards a conflicting file. Changed destinations are moved to:
+Changed configuration destinations are moved to a backup before replacement. Existing MIME and terminal-default files are copied to the backup before defaults are registered:
 
 ```text
 ~/.dotfiles-backup/YYYYMMDD-HHMMSS-PID/
 ```
 
-Identical files and matching symlinks are left in place. Re-running the installer is idempotent.
+Identical configuration files and matching symlinks are left in place. Existing MIME and terminal-default files are snapshotted on each install before their contents are updated.
+
+The installer leaves legacy `~/.config/swaync` contents untouched; the native
+notification service does not read them. It does not uninstall SwayNC or stop a
+running notification daemon.
+Sign out and back in after updating so the native service can claim the session
+bus without competing with an old daemon. The installed per-user D-Bus activation
+entry points `org.freedesktop.Notifications` to `mango-notify`.
 
 ## Repository layout
 
@@ -195,10 +230,9 @@ Identical files and matching symlinks are left in place. Re-running the installe
 ├── .config/
 │   ├── mango/                 # compositor, rules, bindings, startup
 │   ├── waybar/                # switchable bar/dock modules and styling
-│   ├── swaync/                # notifications and control center
 │   ├── rofi/                  # launcher
-│   ├── kitty/                 # default terminal
-│   ├── foot/                  # alternative Wayland terminal and generated palette
+│   ├── kitty/                 # alternative terminal and generated palette
+│   ├── foot/                  # default Wayland terminal and generated palette
 │   ├── btop/                  # generated activity monitor theme
 │   ├── nvim/                  # LazyVim setup and generated Mango palette
 │   ├── fish/                  # shell startup and generated colors
@@ -213,13 +247,16 @@ Identical files and matching symlinks are left in place. Re-running the installe
 │   └── share/
 │       ├── network-popup/     # Qt Wi-Fi popup source
 │       ├── bluetooth-popup/   # Qt Bluetooth popup source
-│       ├── tuned-popup/       # Qt TuneD profile selector source
+│       ├── ppd-popup/         # Qt power-profiles-daemon selector source
+│       ├── popup-ui/          # shared right-edge popup motion
 │       ├── battery-popup/     # Read-only Qt battery information panel
 │       ├── mango-osd/         # Qt OSD source
+│       ├── mango-notify/      # C++ / Qt Quick notification service and controls
 │       ├── wallpaper-overview/ # Qt wallpaper gallery source
-│       ├── applications/      # terminal-first desktop launchers
+│       ├── applications/      # desktop launchers and terminal-first utilities
+│       ├── dbus-1/services/   # native notification service activation
 │       └── color-schemes/     # KDE fallback color scheme
-├── system/                    # TuneD profile mapping and Artix OpenRC service
+├── system/                    # pinned package recipes for Artix dependencies
 ├── AUDIT.md                   # system audit and exclusions
 ├── packages.txt               # repository, AUR, and Artix/OpenRC packages
 └── install.sh                 # installer, builder, and service setup
@@ -230,7 +267,8 @@ Identical files and matching symlinks are left in place. Re-running the installe
 ```mermaid
 flowchart LR
     W[Wallpaper path] --> P[Theme and light/dark variant]
-    P --> A[MangoWM / Waybar / SwayNC / Rofi]
+    P --> A[MangoWM / Waybar / Rofi]
+    A --> N[mango-notify reads Rofi palette]
     P --> T[Kitty / Foot / btop / LazyVim]
     A --> S[sync-desktop-colors]
     S --> K[KDE / Dolphin / GTK]
@@ -255,17 +293,43 @@ Without an argument, it uses this precedence:
 3. The first supported image under `~/Pictures`.
 4. The tracked fallback palette when no image exists.
 
-The theme command reloads MangoWM, Waybar, Kitty, btop, and SwayNC after regenerating colors. Running LazyVim instances watch the generated palette and recolor immediately; Fish reloads its generated colors at the next prompt.
+The theme command reloads MangoWM, Waybar, Kitty, btop, and mango-notify after regenerating colors. The native notification service reads and watches `~/.config/rofi/colors.rasi` directly; it has no separate generated CSS or palette template. Running LazyVim instances watch the generated palette and recolor immediately; Fish reloads its generated colors at the next prompt.
 
 GTK uses portable Adwaita styling with the generated GTK3/GTK4 color overrides;
 Qt applications use the generated KDE color scheme instead of Artix-only
 `qt5ct`/`qt6ct` theme files. The Waybar launcher and Fastfetch banner use
 Mango branding on all three distributions.
 
+### Brave Origin
+
+The package step installs the stable [`brave-origin-bin`](https://aur.archlinux.org/packages/brave-origin-bin)
+package, not Brave Beta. The `brave-origin.desktop` entry launches `brave-session`,
+which runs only `brave-origin` and retains the session-bus notification fix.
+HTML files and HTTP/HTTPS links use Origin by default. An older managed
+`brave-browser-beta.desktop` launcher is moved into the installer's backup;
+existing Beta packages, browser profiles, bookmarks, and extensions are not removed
+or migrated.
+
+`~/.config/brave-origin-flags.conf` selects Qt 6 with `--qt-version=6` and
+`--ui-toolkit=qt`; the launcher selects the KDE platform theme. This reuses
+`MangoDynamic.colors` and `kdeglobals`, already generated by `theme-wallpaper`,
+without another color file, extension, or background service.
+
+After installing, fully quit Origin and reopen it, then select **Use QT** under
+**Theme** at `chrome://settings/appearance` once per browser profile. A custom
+browser theme can override the system palette. Browser controls use the system
+palette; websites retain their own styles.
+
+Do not assume an open browser recolors immediately when the wallpaper changes.
+With Origin 1.97.59, the Qt palette was available but an existing window retained
+its previous colors until a page reload; restarting Origin also reads the current
+palette. The installer does not restart the browser or rewrite profile preferences.
+
+
 ### Foot terminal
 
-Foot is installed alongside Kitty; the default terminal, application launchers,
-and `Super+Return` binding remain on Kitty. Run `foot` to open the alternative.
+Foot is the default terminal for application launchers and the `Super+Return`
+binding. Kitty remains installed as an alternative; run `kitty` to open it.
 
 `~/.config/foot/foot.ini` uses Fish, JetBrainsMono Nerd Font at 11 pt, 8 px
 padding, a silent bell, and 75% background opacity. It includes the generated
@@ -318,17 +382,115 @@ through the settings portal, whose value comes from dconf.
 
 ### Waybar layouts
 
-Waybar ships with a full-width `bar` profile and an inset `dock` profile. The
-`Bar`/`Dock` status module runs `~/.config/waybar/mode.sh toggle`, replaces the
-active config and stylesheet, restarts Waybar, and records the choice in
-`~/.config/waybar/.mode`. `install.sh` reapplies that profile after refreshing
-the tracked files.
+Waybar ships with a three-island `bar` profile and a unified floating `dock`
+profile. Both use a 38 px height, a 4 px top margin, and no extra bottom
+margin; side insets are 6 px for bar and 12 px for dock. Island positions
+remain left/center/right rather than being packed together.
 
-The TuneD indicator reads `/etc/tuned/active_profile` every two seconds.
-Reading the daemon-maintained file avoids repeatedly starting Python via
-`tuned-adm active`; clicking the indicator still opens the profile selector.
+The `Bar`/`Dock` status module runs `~/.config/waybar/mode.sh toggle`,
+replaces the active config and stylesheet, restarts Waybar, and records the
+choice in `~/.config/waybar/.mode`. `install.sh` reapplies that profile after
+refreshing the tracked files.
+
+`common.css` owns module spacing, pill-shaped workspace states, hover
+feedback, and warning colors for both layouts. The profile stylesheets own
+only the outer island/dock shape. All colors come from the generated
+`colors.css`, so wallpaper/theme changes preserve the geometry.
+
+The `custom/ppd` power indicator reads the genuine power-profiles-daemon's
+`ActiveProfile` property over system D-Bus and subscribes to changes through
+Python/Gio. It does not poll state files or run periodic subprocesses.
+Clicking the indicator opens `ppd-popup` rather than cycling profiles.
 
 ## Custom utilities
+
+### Native notifications
+
+`mango-notify` is the notification daemon itself, not a skin or frontend for
+another service. Its C++ backend owns the standard session-bus
+`org.freedesktop.Notifications` interface; Qt Quick renders the toast stack and
+compact desktop-control panel in one dynamically sized, top-right layer-shell
+surface. LayerShellQt supplies real Wayland overlay positioning and resizing;
+it does not rely on a compositor floating-window size workaround.
+There is no large title banner, background picture, blur, or compositor shadow.
+Panel content stays loaded until the close animation finishes, then unloads.
+
+Notifications retain a bounded in-memory history (up to 200 entries), support
+application actions, replacement IDs, images, and inline replies, and remain in
+history after a toast times out. Restarting the daemon clears this history.
+Opening the panel marks history read and hides toasts. Do Not Disturb persists
+across restarts; it suppresses normal toasts while retaining history, with
+critical notifications still visible.
+
+The panel provides real output volume, speaker and microphone mute, brightness,
+Wi-Fi and Bluetooth switches, power-profile status, and MPRIS media controls.
+Network, Bluetooth, power-profile, and audio shortcuts open the existing native
+popups or `pavucontrol`. State updates are event-driven through PulseAudio,
+D-Bus, and file watches, not a loop of shell commands.
+
+Left-click Waybar's notification bell to toggle the panel; right-click to toggle
+Do Not Disturb. The module streams JSON from `mango-notify --subscribe`, including
+the notification count and DND state in its tooltip. The **Notifications**
+application launcher opens the same panel.
+
+```bash
+mango-notify --open       # show the panel
+mango-notify --close      # hide the panel
+mango-notify --toggle     # toggle the panel
+mango-notify --dnd        # toggle Do Not Disturb
+mango-notify --dnd-on     # explicitly enable it
+mango-notify --dnd-off    # explicitly disable it
+mango-notify --count      # print retained notification count
+mango-notify --clear      # dismiss retained notifications
+mango-notify --reload     # reread the shared theme
+mango-notify --subscribe  # stream Waybar JSON updates
+```
+
+Mango starts `mango-notify --daemon` at login. Per-user D-Bus activation entries
+also start it for the standard notification service and its native control
+interface. Only one daemon can own the standard bus name; mango-notify reports
+a conflict rather than replacing another notification service. Starting it
+again when its own service already exists is harmless. CLI control uses
+`org.mango.Notifications` at `/org/mango/Notifications` without initializing a
+second graphical application. `mango-notify --quit` stops the native daemon.
+
+Backend regression tests cover replacement identity, closure reasons,
+retained/transient expiry, DND and critical notifications, resident actions,
+inline replies, and bounded history. Run them on a private session bus and
+configuration directory:
+
+```bash
+build_dir="$(mktemp -d)"
+qmake6 "$HOME/.local/share/mango-notify/tests/notificationservice-test.pro" \
+  -o "$build_dir/Makefile"
+make -C "$build_dir" -j2
+dbus-run-session -- env XDG_CONFIG_HOME="$build_dir/config" \
+  "$build_dir/notificationservice-test"
+```
+
+#### Measured resource comparison
+
+Measured on this Artix desktop with SwayNC 0.12.6 and Qt 6.12.0; the native
+application uses Qt Quick's software renderer. Both runs injected five retained
+notifications, warmed the panel once, then sampled each state for eight seconds.
+Values include the daemon and Waybar subscriber. Existing history was not
+cleared, so this is a session before/after comparison, not an isolated benchmark.
+
+| Measurement | SwayNC | mango-notify |
+|---|---:|---:|
+| Panel closed: PSS (MiB) | 85.58 | 57.81 |
+| Panel open: PSS (MiB) | 85.58 | 57.86 |
+| Panel closed: summed RSS (MiB) | 126.55 | 130.67 |
+| Panel closed: CPU (% of one core) | 0.000 | 0.248 |
+| Panel open: CPU (% of one core) | 0.124 | 0.124 |
+
+PSS apportions shared library pages; summed RSS counts those pages in each
+process. The native result has lower PSS but slightly higher RSS, and does not
+show an idle-CPU reduction in this short sample. Zero recorded CPU ticks are
+not a guarantee of permanently zero CPU usage. Raw measurements on this machine
+are saved in `~/.local/state/mango-notify/resource-comparison.json`.
+
+
 
 ### Connectivity popups
 
@@ -339,6 +501,13 @@ Reading the daemon-maintained file avoids repeatedly starting Python via
 - Tracks radio and connection changes made outside the popup; refreshes the list
   without freezing the window, and reports failed operations instead of closing.
 - Connects to open or secured networks, disconnects, and turns Wi-Fi off or on.
+- Lists saved profiles separately by connection name and UUID, showing each
+  profile's security; an access point is marked in range only when its advertised
+  security matches the profile. Unknown security types may require `nmtui`.
+- Shows saved networks that are out of range, connection details, and per-profile automatic connection settings; forgetting a profile requires confirmation.
+- Retries saved profiles by UUID, supplying supported passwords through nmcli's
+  standard input rather than command arguments. Enterprise configurations
+  requiring other credentials should be configured with `nmtui`.
 - Opens `nmtui` for advanced configuration.
 
 `bluetooth-popup` is a matching frontend backed by `bluetoothctl`.
@@ -349,8 +518,19 @@ Reading the daemon-maintained file avoids repeatedly starting Python via
   the window; keeps paired devices visible when the adapter is off.
 - Verifies requested changes and displays errors when BlueZ rejects them.
 
-Launch either popup from its Waybar module. Clicking the same module again, pressing
-Escape, or moving focus away closes it.
+Launch Wi-Fi, Bluetooth, Power profiles, or Battery from its Waybar module. They enter from the right
+in 180 ms (ease-out cubic) and exit to the right in 140 ms (ease-in cubic), without
+vertical motion. The shared `popup-ui/PopupWindow.qml` owns the transition;
+compositor animations are disabled only for these four windows.
+Both `animation_type_open:none` and `animation_type_close:none` are explicit:
+Mango's unmap path can still create a close snapshot when only `no_animation`
+is set, which otherwise adds an upward slide after the QML exit.
+
+Clicking the same module again, Escape, a window-close request, or moving focus
+away uses the same exit animation before the process ends. Focus loss is
+debounced for 80 ms, and closing during entry continues from the current position.
+The native single-instance socket handles toggle-close without initializing a
+second GUI. No animation timer remains active after the panel settles.
 
 ### Battery information
 
@@ -363,15 +543,21 @@ Expand **Battery details** for design/full capacity, voltage, temperature,
 manufacturer, model, technology, and charge thresholds. Details scroll within a
 400 × 536 px viewport; the header and close controls remain visible. The viewport
 shrinks on shorter screens. This is a read-only panel, not a charging-limit or
-TuneD profile editor.
+power-profile editor.
+
+The details toggle has 12 px internal padding, so its focus border stays clear of
+the label. Expanded information sits in a separate card with 14 px padding and
+separators between readings, device identity, and charge thresholds. Opening the
+card reveals it with a bounded 160 ms scroll; the header and close controls stay fixed.
 
 - Reads the selected system battery and charger state directly from sysfs; no
   shell commands, UPower dependency, or new background service.
 - Refreshes once on opening and approximately every 15 seconds while open,
   using a coarse timer. Close/reopen for an immediate refresh after a change.
-- Uses the software Qt Quick renderer, without compositor blur, shadows,
-  animations, or a continuous render loop. Detail items are created only when
-  expanded; unchanged values do not notify QML bindings.
+- Uses the software Qt Quick renderer without compositor blur, shadows, or a
+  continuous render loop. Opening and closing reuse the shared popup transition
+  above; detail items are created only when expanded, and unchanged values do
+  not notify QML bindings.
 - Clicking the battery indicator again, Escape, the close button, or moving
   focus away exits the process. No battery-popup process remains when closed.
 - Missing data is marked unavailable, not zero. Health ratios above 100% are
@@ -385,15 +571,22 @@ regression coverage lives in
 `qmake6` and `make` in a separate temporary directory, then run
 `./batterycontroller-test`.
 
-### TuneD power profiles
+### Power profiles
 
-The Waybar gauge opens `tuned-popup`, a focused selector for laptop-relevant
-TuneD profiles. TuneD and `tuned-ppd` replace `power-profiles-daemon`, mapping
-PPD power saver to `laptop-battery-powersave`. The installer builds the popup
-from source and enables both services with systemd on Arch/CachyOS or OpenRC
-on Artix.
+The Waybar gauge opens `ppd-popup`, a focused selector backed by genuine
+power-profiles-daemon. The popup queries the daemon's `Profiles` and
+`ActiveProfile` properties through QtDBus, subscribes to property changes,
+and displays only the profiles the daemon reports. Profile selection uses
+an asynchronous D-Bus `Properties.Set` call for `ActiveProfile`, not `pkexec`
+or a privileged helper. PPD's unchanged default polkit policy authorizes
+active local desktop sessions without a password prompt. There is no TuneD
+mapping or translation service.
 
-The Wi-Fi, Bluetooth, and TuneD popups share an Instrument-style Qt Quick UI:
+The installer builds the popup from source and enables
+`power-profiles-daemon.service` on Arch/CachyOS or the packaged
+`power-profiles-daemon` OpenRC service on Artix.
+
+The Wi-Fi, Bluetooth, and power-profile popups share an Instrument-style Qt Quick UI:
 sharp-edged controls, a live status summary, and a flat list with separate
 keyboard selection and connected/active indicators. Each popup reads the
 generated `~/.config/rofi/colors.rasi` palette when opened, so the accent and
@@ -430,7 +623,7 @@ Floating Qt Quick wallpaper browser with animated keyboard and pointer navigatio
 | Binding | Action |
 |---|---|
 | `Super+D` | Open Rofi |
-| `Super+Return` | Open Kitty |
+| `Super+Return` | Open Foot |
 | `Super+E` | Open Dolphin |
 | `Super+W` | Open wallpaper gallery |
 | `Super+R` | Regenerate colors from the current wallpaper |
@@ -487,10 +680,7 @@ Hardware brightness and volume keys call the custom controls and display the OSD
 
 ## Hardware adaptation
 
-The checked-in configuration reflects the audited machine, but the installer rewrites two hardware-specific defaults:
-
-- `wlan0` becomes the first non-P2P Wi-Fi interface reported by NetworkManager.
-- `amdgpu_bl2` becomes the first device under `/sys/class/backlight`.
+The checked-in configuration reflects the audited machine. The installer changes the default backlight device from `amdgpu_bl2` to the first device under `/sys/class/backlight`. The Wi-Fi popup selects an available NetworkManager Wi-Fi interface at runtime.
 
 Manual overrides remain available:
 
@@ -531,15 +721,14 @@ mango -p -c ~/.config/mango/config.conf
 On Arch/CachyOS (systemd):
 
 ```bash
-systemctl status NetworkManager.service bluetooth.service tuned.service tuned-ppd.service sddm.service
+systemctl status NetworkManager.service bluetooth.service power-profiles-daemon.service sddm.service
 systemctl --user status pipewire.socket pipewire-pulse.socket wireplumber.service
 ```
 
 On Artix (OpenRC):
 
 ```bash
-rc-service tuned status
-rc-service tuned-ppd status
+rc-service power-profiles-daemon status
 rc-update --user show
 ```
 
@@ -555,17 +744,16 @@ The Mango config intentionally runs `theme-wallpaper` before `waybar`. Do not sp
 
 ### Brave notifications appear as application windows
 
-SwayNC must own `org.freedesktop.Notifications` before Brave starts:
+`mango-notify` must own `org.freedesktop.Notifications` before Brave starts:
 
 ```bash
 busctl --user status org.freedesktop.Notifications
 ```
 
 The `brave-session` launcher supplies the session bus address from
-`$XDG_RUNTIME_DIR/bus` if the login environment did not set it. It discovers
-the installed Brave executable (`brave-beta`, `brave-browser-beta`,
-`brave-browser`, or `brave`), so the fix is not tied to one package path.
-Fully quit Brave and installed Brave web apps before reopening them. Sign out
+`$XDG_RUNTIME_DIR/bus` if the login environment did not set it. It launches
+`brave-origin` from the stable `brave-origin-bin` package, not Beta or regular
+Brave. Fully quit Origin and installed Brave web apps before reopening them. Sign out
 once after the first install so Mango and D-Bus/user services inherit the
 session environment.
 
@@ -612,7 +800,7 @@ BACKLIGHT_DEVICE=your_device brightness-control get
 Find the newest backup:
 
 ```bash
-find ~/.dotfiles-backup -maxdepth 2 -type f
+find ~/.dotfiles-backup -type f
 ```
 
 Then copy the desired file back to its original relative path.

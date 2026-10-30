@@ -174,7 +174,7 @@ def foot(c: dict[str, str], theme: str, variant: str) -> str:
 def mango(c: dict[str, str], theme: str, variant: str) -> str:
     def rgba(value: str, alpha: str = "ff") -> str:
         return f"0x{value[1:]}{alpha}"
-    return "\n".join((f"# Generated from named theme {theme}/{variant}.", f"rootcolor={rgba(c['background'])}", f"bordercolor={rgba(c['border'])}", f"dropcolor={rgba(c['accent'], '66')}", f"splitcolor={rgba(c['cyan'])}", f"focuscolor={rgba(c['accent'])}", f"maximizescreencolor={rgba(c['red'])}", f"urgentcolor={rgba(c['red'])}", f"scratchpadcolor={rgba(c['magenta'])}", f"globalcolor={rgba(c['yellow'])}", f"overlaycolor={rgba(c['surface_high'])}")) + "\n"
+    return "\n".join((f"# Generated from named theme {theme}/{variant}.", f"root_color={rgba(c['background'])}", f"border_color={rgba(c['border'])}", f"drop_color={rgba(c['accent'], '66')}", f"split_color={rgba(c['cyan'])}", f"focus_color={rgba(c['accent'])}", f"maximized_screen_color={rgba(c['red'])}", f"urgent_color={rgba(c['red'])}", f"scratchpad_color={rgba(c['magenta'])}", f"global_color={rgba(c['yellow'])}", f"overlay_color={rgba(c['surface_high'])}")) + "\n"
 
 
 def btop(c: dict[str, str], theme: str, variant: str) -> str:
@@ -202,7 +202,6 @@ def main() -> None:
     css = material_css(c, theme, variant)
     atomic_write(HOME / ".config/rofi/colors.rasi", rofi(c, theme, variant))
     atomic_write(HOME / ".config/waybar/colors.css", css)
-    atomic_write(HOME / ".config/swaync/colors.css", css)
     atomic_write(HOME / ".config/mango/colors.conf", mango(c, theme, variant))
     atomic_write(HOME / ".config/kitty/colors.conf", kitty(c, theme, variant))
     atomic_write(HOME / ".config/foot/colors.ini", foot(c, theme, variant))

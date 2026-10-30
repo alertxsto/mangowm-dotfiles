@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Switches the V4.y bar between the full-width bar and the floating dock.
+# Switches Waybar between three floating islands and a unified dock.
 set -euo pipefail
 
 dir="${XDG_CONFIG_HOME:-$HOME/.config}/waybar"

@@ -66,14 +66,15 @@ QVariantMap loadPalette(const QString &path) {
 }
 
 int main(int argc, char **argv) {
+    // Toggle-close uses the local socket without creating another GUI.
+    if (closeRunningPopup())
+        return 0;
+
     QQuickWindow::setGraphicsApi(QSGRendererInterface::Software);
     QGuiApplication app(argc, argv);
     QGuiApplication::setApplicationName(QStringLiteral("battery-popup"));
     QGuiApplication::setDesktopFileName(QStringLiteral("battery-popup"));
     app.setQuitOnLastWindowClosed(true);
-
-    if (closeRunningPopup())
-        return 0;
 
     QLockFile lock(QDir::tempPath() + QLatin1Char('/') + socketName() + QStringLiteral(".lock"));
     lock.setStaleLockTime(0);
@@ -86,15 +87,17 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    BatteryController controller;
+    QQmlApplicationEngine engine;
     QLocalServer::removeServer(socketName());
     QLocalServer server;
     if (!server.listen(socketName()))
         return 1;
     QObject::connect(&server, &QLocalServer::newConnection, &app, [&] {
         while (QLocalSocket *socket = server.nextPendingConnection()) {
-            const auto handleMessage = [socket] {
+            const auto handleMessage = [socket, &engine] {
                 if (socket->readAll().contains("close"))
-                    QCoreApplication::quit();
+                    QMetaObject::invokeMethod(engine.rootObjects().constFirst(), "dismiss");
                 socket->disconnectFromServer();
             };
             QObject::connect(socket, &QLocalSocket::readyRead, socket, handleMessage);
@@ -104,8 +107,6 @@ int main(int argc, char **argv) {
         }
     });
 
-    BatteryController controller;
-    QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty(QStringLiteral("batteryController"), &controller);
     engine.rootContext()->setContextProperty(
         QStringLiteral("themeColors"), loadPalette(QDir::homePath() + QStringLiteral("/.config/rofi/colors.rasi")));

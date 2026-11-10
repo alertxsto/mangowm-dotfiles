@@ -380,6 +380,18 @@ sync-cursor
 Editing only `settings.ini` is not enough: on Wayland, GTK resolves the cursor
 through the settings portal, whose value comes from dconf.
 
+KDE's `gtkconfig` module also republishes `kcminputrc` `[Mouse]` into GTK and
+dconf when KDE applications start. Cursor keys must stay in `[Mouse]`, not
+the later `[Libinput]` device groups; otherwise Waybar can revert to another
+cursor theme. The helper updates only the requested group and preserves
+unrelated input settings.
+
+Run the cursor synchronization regressions from the repository root:
+
+```bash
+python3 -B -m unittest discover -s tests -p test_sync_cursor.py -v
+```
+
 ### Waybar layouts
 
 Waybar ships with a three-island `bar` profile and a unified floating `dock`

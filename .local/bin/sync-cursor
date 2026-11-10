@@ -10,7 +10,8 @@ mirrors those two values into all of them:
   `org.gnome.desktop.interface cursor-theme`/`cursor-size`; their `settings.ini`
   keys are written as the fallback for X11 and portal-less sessions.
 - GTK2 reads `~/.gtkrc-2.0`.
-- Qt via the KDE platform theme reads `kcminputrc [Mouse]`.
+- Qt via the KDE platform theme reads `kcminputrc [Mouse]`. KDE's gtkconfig
+  module also republishes this group to GTK and dconf when KDE apps start.
 - XSettings consumers read `xsettingsd.conf`.
 - Anything asking for the theme named `default` reads
   `~/.icons/default/index.theme`.
@@ -46,16 +47,23 @@ def mango_setting(key: str, fallback: str) -> str:
 
 
 def set_ini(path: Path, values: dict[str, str], section: str = "Settings") -> None:
-    """Rewrites the given keys of a settings.ini, creating them when absent."""
-    text = path.read_text() if path.exists() else f"[{section}]\n"
-    if f"[{section}]" not in text:
-        text = f"[{section}]\n" + text
+    """Update keys only inside the requested group, preserving other groups."""
+    text = path.read_text() if path.exists() else ""
+    header = re.compile(rf"^\[{re.escape(section)}\][ \t]*$", re.MULTILINE)
+    match = header.search(text)
+    if match is None:
+        text = text.rstrip() + f"\n[{section}]\n" if text else f"[{section}]\n"
+        match = header.search(text)
+    start = match.end()
+    next_header = re.search(r"^\[", text[start:], re.MULTILINE)
+    end = start + next_header.start() if next_header else len(text)
+    body = text[start:end]
     for key, value in values.items():
         pattern = re.compile(rf"^{re.escape(key)}\s*=.*$", re.MULTILINE)
         line = f"{key}={value}"
-        text = pattern.sub(line, text) if pattern.search(text) else text.rstrip() + f"\n{line}\n"
+        body = pattern.sub(line, body) if pattern.search(body) else body.rstrip() + f"\n{line}\n"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text)
+    path.write_text(text[:start] + body + text[end:])
 
 
 def set_quoted(path: Path, values: dict[str, str]) -> None:

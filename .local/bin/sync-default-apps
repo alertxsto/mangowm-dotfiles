@@ -2,6 +2,11 @@
 set -euo pipefail
 applications_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}"
+browser_desktop=brave-origin.desktop
+browser_config="${XDG_CONFIG_HOME:-$HOME/.config}/mango/browser.desktop"
+if [[ -r "$browser_config" ]]; then
+  browser_desktop="$(<"$browser_config")"
+fi
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database "$applications_dir"
 fi
@@ -22,7 +27,7 @@ for mime_type in "${mime_types[@]}"; do
 done
 env -u KDE_SESSION_VERSION XDG_CURRENT_DESKTOP=X-Generic xdg-mime default foot.desktop x-scheme-handler/terminal
 for mime_type in text/html application/xhtml+xml x-scheme-handler/http x-scheme-handler/https; do
-  env -u KDE_SESSION_VERSION XDG_CURRENT_DESKTOP=X-Generic xdg-mime default brave-origin.desktop "$mime_type"
+  env -u KDE_SESSION_VERSION XDG_CURRENT_DESKTOP=X-Generic xdg-mime default "$browser_desktop" "$mime_type"
 done
 
 printf 'foot.desktop\n' > "${XDG_CONFIG_HOME:-$HOME/.config}/xdg-terminals.list"
@@ -30,5 +35,5 @@ printf 'foot.desktop\n' > "${XDG_CONFIG_HOME:-$HOME/.config}/xdg-terminals.list"
 if command -v kwriteconfig6 >/dev/null 2>&1; then
   kwriteconfig6 --file kdeglobals --group General --key TerminalApplication foot
   kwriteconfig6 --file kdeglobals --group General --key TerminalService foot.desktop
-  kwriteconfig6 --file kdeglobals --group General --key BrowserApplication brave-origin.desktop
+  kwriteconfig6 --file kdeglobals --group General --key BrowserApplication "$browser_desktop"
 fi

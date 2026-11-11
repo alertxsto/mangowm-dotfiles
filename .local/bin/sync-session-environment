@@ -9,3 +9,9 @@ if [[ -d /run/systemd/system ]]; then
 else
   dbus-update-activation-environment "${args[@]}"
 fi
+
+# Mango does not process XDG autostart entries. Complete KWallet's PAM handoff
+# after publishing the session environment so the login-unlocked wallet is usable.
+if [[ -n "${PAM_KWALLET5_LOGIN:-}" && -S "$PAM_KWALLET5_LOGIN" ]]; then
+  /usr/lib/pam_kwallet_init
+fi

@@ -7,6 +7,13 @@ install_packages=1
 enable_services=1
 build_native=1
 assume_yes=0
+browser_ids=(brave-origin brave chromium firefox)
+browser_labels=('Brave Origin' 'Brave' 'Chromium' 'Firefox')
+browser_packages=(brave-origin-bin brave-bin chromium firefox)
+browser_desktops=(brave-origin.desktop brave-browser.desktop chromium.desktop firefox.desktop)
+browser_flags=(brave-origin-flags.conf brave-flags.conf chromium-flags.conf '')
+browser_index=0
+requested_browser=''
 native_projects=(
   network-popup bluetooth-popup ppd-popup battery-popup mango-osd mango-notify wallpaper-overview
 )
@@ -16,13 +23,14 @@ usage() {
 Usage: ./install.sh [options]
 
   --target-home PATH  Install into PATH instead of $HOME
+  --browser NAME      Select brave-origin, brave, chromium, or firefox
   --skip-packages     Do not install pacman/AUR packages
   --skip-services     Do not enable system services
   --skip-build        Do not build the native Qt utilities
   --yes               Use selected steps without interactive questions
   -h, --help          Show this help
 
-Interactive keys: Up/Down or j/k to move, Space to toggle, Enter to review;
+Interactive keys: Up/Down or j/k to move, Space to toggle/cycle, Enter to review;
                   y to start, e to edit, q to cancel.
 EOF
 }
@@ -56,7 +64,7 @@ leave_tui() {
 }
 
 draw_brand() {
-  if ((term_cols >= 118 && term_rows >= 26)); then
+  if ((term_cols >= 118 && term_rows >= 28)); then
     printf '%s' "$brand"
     cat <<'BANNER'
      ▄████████  ▄█          ▄████████    ▄████████     ███     ▀████    ▐████▀    ▄████████     ███      ▄██████▄
@@ -74,7 +82,7 @@ BANNER
     if ((term_cols < 118)); then
       printf '  %sWiden to 118 columns for the full wordmark.%s\n' "$muted" "$base"
     else
-      printf '  %sGrow to 26 rows for the full wordmark.%s\n' "$muted" "$base"
+      printf '  %sGrow to 28 rows for the full wordmark.%s\n' "$muted" "$base"
     fi
   fi
   printf '%s' "$base"
@@ -118,7 +126,17 @@ draw_tui() {
     option_row 0 'Packages' "$package_detail" "$install_packages" "$package_locked"
     option_row 1 'Qt utilities' "$build_detail" "$build_native" "$build_locked"
     option_row 2 'Login services' "$service_detail" "$enable_services" "$service_locked"
-    printf '\n  %sUP/DOWN or j/k: move    SPACE: toggle    ENTER: review%s\n' "$accent" "$base"
+    local browser_style="$base" browser_pointer=' '
+    if ((cursor == 3)); then
+      browser_style="$focus"
+      browser_pointer='>'
+    fi
+    printf '  %s      %sBrowser: %s%s\n' "$browser_pointer" "$browser_style" \
+      "${browser_labels[browser_index]}" "$base"
+    if ((term_cols >= 70)); then
+      printf '         %sSPACE: choose the next browser%s\n' "$muted" "$base"
+    fi
+    printf '\n  %sUP/DOWN or j/k: move    SPACE: toggle/cycle    ENTER: review%s\n' "$accent" "$base"
     printf '  %sq: cancel%s\n' "$muted" "$base"
   else
     printf '\n  Review your plan\n\n'
@@ -126,6 +144,7 @@ draw_tui() {
     printf '  Packages       %s\n' "$package_action"
     printf '  Qt utilities   %s\n' "$build_action"
     printf '  Login services %s\n' "$service_action"
+    printf '  Browser        %s\n' "${browser_labels[browser_index]}"
     printf '\n  %sChanging packages/services may ask for sudo.%s\n' "$warn" "$base"
     printf '\n  %sy: start    e: edit selection    q: cancel%s\n' "$accent" "$base"
   fi
@@ -188,13 +207,14 @@ select_install_steps() {
     read_tui_key
     if [[ "$screen" == select ]]; then
       case "$REPLY" in
-        k) cursor=$(((cursor + 2) % 3)) ;;
-        j) cursor=$(((cursor + 1) % 3)) ;;
+        k) cursor=$(((cursor + 3) % 4)) ;;
+        j) cursor=$(((cursor + 1) % 4)) ;;
         ' ')
           case "$cursor" in
             0) ((package_locked)) || install_packages=$((1 - install_packages)) ;;
             1) ((build_locked)) || build_native=$((1 - build_native)) ;;
             2) ((service_locked)) || enable_services=$((1 - enable_services)) ;;
+            3) browser_index=$(((browser_index + 1) % ${#browser_ids[@]})) ;;
           esac
           ;;
         '') screen=review ;;
@@ -215,6 +235,11 @@ while (($#)); do
     --target-home)
       (($# >= 2)) || die '--target-home requires a path'
       target_home="$(realpath -m -- "$2")"
+      shift 2
+      ;;
+    --browser)
+      (($# >= 2)) && [[ -n "$2" ]] || die '--browser requires a name'
+      requested_browser="$2"
       shift 2
       ;;
     --skip-packages)
@@ -242,6 +267,25 @@ while (($#)); do
       ;;
   esac
 done
+
+if [[ -n "$requested_browser" ]]; then
+  browser_index=-1
+  for index in "${!browser_ids[@]}"; do
+    if [[ "${browser_ids[index]}" == "$requested_browser" ]]; then
+      browser_index="$index"
+      break
+    fi
+  done
+  ((browser_index >= 0)) || die "unsupported browser: $requested_browser"
+elif [[ -r "$target_home/.config/mango/browser.desktop" ]]; then
+  saved_browser="$(<"$target_home/.config/mango/browser.desktop")"
+  for index in "${!browser_desktops[@]}"; do
+    if [[ "${browser_desktops[index]}" == "$saved_browser" ]]; then
+      browser_index="$index"
+      break
+    fi
+  done
+fi
 
 ((EUID != 0)) || die 'run this script as a regular user; it invokes sudo when required'
 
@@ -275,6 +319,7 @@ package_action='skip' build_action='skip' service_action='skip'
 printf '\nPlan for %s (%s):\n' "$target_home" "${distro_id:-config only}"
 printf '  Packages: %s\n  Qt build: %s\n  Services: %s\n  Dotfiles: install with backups\n' \
   "$package_action" "$build_action" "$service_action"
+printf '  Browser: %s (%s)\n' "${browser_labels[browser_index]}" "${browser_packages[browser_index]}"
 mkdir -p -- "$target_home"
 
 bootstrap_yay() {
@@ -379,7 +424,7 @@ install_system_packages() {
   if [[ "$distro_id" == artix ]]; then
     packages+=("${artix_packages[@]}")
   fi
-  packages+=("${aur_packages[@]}")
+  packages+=("${aur_packages[@]}" "${browser_packages[browser_index]}")
   local -a install_flags=(--needed --noconfirm)
   if [[ "$(pacman -Qq tuned-ppd 2>/dev/null || true)" == tuned-ppd ]]; then
     # Replace the conflicting provider in one dependency-checked transaction.
@@ -473,6 +518,12 @@ install_tree() {
   local relative_root="$1" relative source
   for relative in "${install_sources[@]}"; do
     [[ "$relative" == "$relative_root/"* ]] || continue
+    # Browser flags are merged below rather than replacing local options.
+    [[ "$relative" == .config/brave-origin-flags.conf ]] && continue
+    if ((browser_index != 0)) &&
+      [[ "$relative" == .local/share/applications/brave-origin.desktop ]]; then
+      continue
+    fi
     source="$repo_dir/$relative"
     if [[ -L "$source" ]]; then
       install_link "$source" "$relative"
@@ -505,6 +556,42 @@ install_file "$repo_dir/.bashrc" '.bashrc'
 install_file "$repo_dir/.pam_environment" '.pam_environment'
 install_tree '.config'
 install_tree '.local'
+
+# Persist the chosen desktop entry for startup sync and future installations.
+browser_config="$(mktemp)"
+printf '%s\n' "${browser_desktops[browser_index]}" > "$browser_config"
+install_file "$browser_config" '.config/mango/browser.desktop'
+rm -f -- "$browser_config"
+
+# A managed Origin launcher must not remain visible after selecting another browser.
+origin_launcher="$target_home/.local/share/applications/brave-origin.desktop"
+if ((browser_index != 0)) && [[ -f "$origin_launcher" ]] &&
+  grep -Fq -- '/.local/bin/brave-session' "$origin_launcher"; then
+  backup_destination "$origin_launcher" '.local/share/applications/brave-origin.desktop'
+fi
+
+# Preserve unrelated flags while keeping Chromium's encryption backend stable.
+if [[ -n "${browser_flags[browser_index]}" ]]; then
+  flags_relative=".config/${browser_flags[browser_index]}"
+  flags_source="$target_home/$flags_relative"
+  flags_temporary="$(mktemp)"
+  flags_inputs=()
+  if ((browser_index == 0)); then
+    flags_inputs+=("$repo_dir/.config/brave-origin-flags.conf")
+  fi
+  [[ ! -f "$flags_source" ]] || flags_inputs+=("$flags_source")
+  for flags_input in "${flags_inputs[@]}"; do
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      [[ "$line" =~ ^[[:space:]]*--password-store(=|[[:space:]]|$) ]] && continue
+      if ! grep -Fxq -- "$line" "$flags_temporary"; then
+        printf '%s\n' "$line" >> "$flags_temporary"
+      fi
+    done < "$flags_input"
+  done
+  printf '%s\n' '--password-store=kwallet6' >> "$flags_temporary"
+  install_file "$flags_temporary" "$flags_relative"
+  rm -f -- "$flags_temporary"
+fi
 
 # Retire the old managed Beta launcher without touching browser profiles/packages.
 backup_destination "$target_home/.local/share/applications/brave-browser-beta.desktop" \

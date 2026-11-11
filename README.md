@@ -57,7 +57,7 @@ This repository is an audited snapshot of the active desktop—not a loose colle
 | Compositor | MangoWM |
 | Bar / notifications | Waybar / mango-notify (native C++ / Qt Quick) |
 | Launcher / terminal | Rofi / Foot (default), Kitty |
-| Browser | Brave Origin (stable) |
+| Browser | Selectable: Brave Origin (default), Brave, Chromium, Firefox |
 | Shell / prompt | Fish / Starship |
 | Wallpaper / colors | Custom Qt gallery / curated named palettes |
 | Audio / network | PipeWire + WirePlumber / NetworkManager |
@@ -92,11 +92,12 @@ The installer may request `sudo` for packages and system services (`systemctl` o
 
 On a terminal, the installer opens a keyboard-driven selection screen with
 the `alertxsto` wordmark. Use **Up/Down** or **j/k** to move, **Space** to
-toggle packages, Qt builds, or login services, and **Enter** to review the
-plan. On the review screen, **y** starts installation, **e** edits the
+toggle packages, Qt builds, or login services, and **Space** on the browser
+row to cycle between Brave Origin, Brave, Chromium, and Firefox.
+**Enter** reviews the plan; **y** starts installation, **e** edits the
 selection, and **q** cancels without changing anything. CLI skip options stay
 locked; a custom `--target-home` disables login services. The full supplied
-wordmark needs a terminal at least 118 columns wide and 26 rows high;
+wordmark needs a terminal at least 118 columns wide and 28 rows high;
 smaller terminals get a compact label. Colors are disabled with `NO_COLOR=1`.
 
 On Artix, the installer first ensures SceneFX 0.5 is available for MangoWM's
@@ -129,6 +130,7 @@ The installer seeds `~/Pictures/Wallpapers` and `~/Pictures/blinders.jpg` from t
 
 ```text
 --target-home PATH  Install into PATH instead of $HOME
+--browser NAME      Select brave-origin, brave, chromium, or firefox
 --skip-packages     Do not install pacman/AUR packages
 --skip-services     Do not enable systemd/OpenRC services
 --skip-build        Do not build the native Qt utilities
@@ -144,6 +146,9 @@ Examples:
 
 # Use preselected steps without installer questions (e.g. from a script)
 ./install.sh --yes --skip-services
+
+# Choose Firefox instead of the default Brave Origin
+./install.sh --browser firefox
 
 # Populate an isolated home for inspection
 ./install.sh \
@@ -164,10 +169,10 @@ services even with `--skip-services`; the latter skips enabling new services.
 
 1. Identifies supported systems by `/etc/os-release` ID (`arch`, `cachyos`, or `artix`) for package and service setup.
 2. Bootstraps `yay` when necessary.
-3. Ensures SceneFX 0.5 on Artix, then installs repository and AUR dependencies listed in [`packages.txt`](packages.txt).
+3. Ensures SceneFX 0.5 on Artix, then installs dependencies listed in [`packages.txt`](packages.txt) plus the selected browser package.
 4. In a Git checkout, copies indexed home-tree paths using their working-tree contents; untracked files, including ignored files, are excluded. Without Git metadata, copies the distributed home tree.
 5. Replaces `__HOME__` placeholders with the actual target path.
-6. Registers Brave Origin, Foot, and Neovim as desktop defaults and restores the selected Waybar layout.
+6. Registers the selected browser, Foot, and Neovim as desktop defaults and restores the selected Waybar layout.
 7. Detects the backlight device. The Wi-Fi popup selects an available NetworkManager interface at runtime.
 8. Builds the Wi-Fi, Bluetooth, power-profile (`ppd-popup`), battery information, OSD, notification service, and wallpaper utilities from source. Projects build sequentially with at most two compiler jobs to limit memory pressure; QtDBus comes from `qt6-base`, with `qt6-declarative` and `libpulse` providing the notification UI and audio integration.
 9. Migrates the power backend to genuine power-profiles-daemon and enables the required system and user services through systemd or OpenRC.
@@ -300,15 +305,49 @@ Qt applications use the generated KDE color scheme instead of Artix-only
 `qt5ct`/`qt6ct` theme files. The Waybar launcher and Fastfetch banner use
 Mango branding on all three distributions.
 
-### Brave Origin
+### Browser selection and keyring
 
-The package step installs the stable [`brave-origin-bin`](https://aur.archlinux.org/packages/brave-origin-bin)
-package, not Brave Beta. The `brave-origin.desktop` entry launches `brave-session`,
-which runs only `brave-origin` and retains the session-bus notification fix.
-HTML files and HTTP/HTTPS links use Origin by default. An older managed
-`brave-browser-beta.desktop` launcher is moved into the installer's backup;
-existing Beta packages, browser profiles, bookmarks, and extensions are not removed
-or migrated.
+Choose a browser in the installer or pass `--browser NAME`:
+
+| Name | Browser | Package | Encryption flags |
+| --- | --- | --- | --- |
+| `brave-origin` | Brave Origin (default) | `brave-origin-bin` | `brave-origin-flags.conf` |
+| `brave` | Brave | `brave-bin` | `brave-flags.conf` |
+| `chromium` | Chromium | `chromium` | `chromium-flags.conf` |
+| `firefox` | Firefox | `firefox` | Not applicable |
+
+Only the selected browser package is added to the package transaction. With
+`--skip-packages`, install that browser separately. Selection is saved in
+`~/.config/mango/browser.desktop`; startup `sync-default-apps` and subsequent
+installs without `--browser` retain it. HTML and HTTP/HTTPS associations and
+KDE's default browser follow that selection.
+
+The Origin-specific launcher is installed only when Origin is selected. When
+switching away, the previous managed launcher is backed up; an unrelated custom
+Origin desktop entry is preserved. The old managed Beta launcher is also backed
+up. Browser packages, profiles, cookies, bookmarks, and extensions are never
+removed or migrated when changing this choice.
+
+The package step includes `kwallet`, `kwallet-pam`, `libsecret`, and `socat`.
+After publishing the desktop's D-Bus environment, Mango runs
+`/usr/lib/pam_kwallet_init` when PAM supplied a wallet socket. This completes
+the login handoff normally handled by KDE's XDG autostart.
+SDDM's PAM configuration must include `pam_kwallet5.so`; the wallet must be
+named `kdewallet` and its password must match the login password for automatic
+unlock. Passwordless/fingerprint login does not provide that password.
+The installer does not rewrite PAM configuration or wallet passwords.
+
+Brave Origin, Brave, and Chromium use `--password-store=kwallet6` in the
+selected browser's flags file under `~/.config`, keeping the encryption
+backend stable across desktop environments. Existing unrelated Brave/Chromium
+flags are preserved; Firefox does not receive Chromium flags.
+Fully quit and reopen an existing browser to apply changed flags. The installer
+does not restart it, clear cookies, or weaken encryption with `basic` storage.
+
+#### Brave Origin appearance
+
+The `brave-origin.desktop` entry launches `brave-session`, which runs only
+`brave-origin` and retains the session-bus notification fix.
 
 `~/.config/brave-origin-flags.conf` selects Qt 6 with `--qt-version=6` and
 `--ui-toolkit=qt`; the launcher selects the KDE platform theme. This reuses
@@ -765,7 +804,8 @@ busctl --user status org.freedesktop.Notifications
 The `brave-session` launcher supplies the session bus address from
 `$XDG_RUNTIME_DIR/bus` if the login environment did not set it. It launches
 `brave-origin` from the stable `brave-origin-bin` package, not Beta or regular
-Brave. Fully quit Origin and installed Brave web apps before reopening them. Sign out
+Brave. That managed launcher is installed only when Origin is selected.
+Fully quit Origin and installed Brave web apps before reopening them. Sign out
 once after the first install so Mango and D-Bus/user services inherit the
 session environment.
 

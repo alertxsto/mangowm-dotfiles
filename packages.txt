@@ -25,9 +25,12 @@ grep
 kconfig
 kde-gtk-config
 kitty
+kwallet
+kwallet-pam
 layer-shell-qt
 libnotify
 libpulse
+libsecret
 make
 neovim
 networkmanager
@@ -56,6 +59,7 @@ rofi
 sddm
 slurp
 satty
+socat
 starship
 swaybg
 ttf-font-awesome
@@ -75,7 +79,7 @@ xorg-xwayland
 xsettingsd
 
 # Common AUR packages
-brave-origin-bin
+# The browser package is selected by install.sh --browser.
 bibata-cursor-theme-bin
 mangowm-git
 

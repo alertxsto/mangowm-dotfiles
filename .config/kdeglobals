@@ -133,7 +133,6 @@ ForegroundPositive=241,187,152
 ForegroundVisited=225,189,202
 
 [General]
-BrowserApplication=brave-origin.desktop
 ColorScheme=MangoDynamic
 ColorSchemeHash=74b12695461cae2bcf856d96ab3980ad0e273181
 Name=Mango Dynamic
